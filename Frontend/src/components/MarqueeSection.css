@@ -30,9 +30,9 @@
 /* ── Three.js canvas container ── */
 .threejs-stage {
   width: 100%;
-  flex: 1;                     /* dynamically fill the massive new vertical space */
-  min-height: 250px;           /* ensure a minimum floor */
-  margin-top: -30px;           /* balanced centering for smaller cards */
+  flex: 1;
+  min-height: 220px;
+  margin-top: -85px;           /* pull cards significantly upward directly beneath the dark green curve */
   position: relative;
 }
 

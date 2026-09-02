@@ -92,14 +92,10 @@ export default function App() {
           )}
 
           {/* ── Error feedback ── */}
-          {errorMsg && (
-            <p className="hero-section__error" role="alert">{errorMsg}</p>
-          )}
         </div>
+        {/* ── Seamless Curved Divider inside hero section ── */}
+        <CurvedDivider fillColor="#f5f2eb" />
       </section>
-
-      {/* ████████  CURVED DIVIDER  ████████ */}
-      <CurvedDivider fillColor="#f5f2eb" />
 
       {/* ████████  BOTTOM SECTION  ████████ */}
       <MarqueeSection />

@@ -28,7 +28,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding-bottom: 30px;        /* Reduced padding so the dynamically rendered file uploader fits perfectly */
+  padding-bottom: 0px;         /* CurvedDivider sits at the bottom of the gradient seamlessly */
 }
 
 /* ── Decorative ambient orbs ── */

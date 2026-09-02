@@ -10,10 +10,10 @@
 
 .hero-header__logo {
   font-family: var(--font-display);
-  font-size: clamp(2rem, 5vw, 3.4rem);  /* was clamp(2.8rem, 7vw, 5.5rem) */
+  font-size: clamp(2.6rem, 5.5vw, 4.2rem);
   font-weight: 800;
-  letter-spacing: -2px;
-  line-height: 1;
+  letter-spacing: 0.05em;     /* expanded horizontal length so title isn't flattened */
+  line-height: 1.15;
   user-select: none;
   filter: drop-shadow(0 0 24px rgba(74, 222, 128, 0.25));
 }
