@@ -37,67 +37,33 @@ export default function App() {
     );
   }, []);
 
-  /* ── File change handler ── */
-  const handleFileChange = useCallback((newFile) => {
+  /* ── File change & Auto-Analyze handler ── */
+  const handleFileChange = useCallback(async (newFile) => {
     setFile(newFile);
     setErrorMsg('');
-  }, []);
 
-  /* ── Analyze handler ──────────────────────────────────────
-   *
-   *  WIRE YOUR FASTAPI ENDPOINTS HERE.
-   *
-   *  Suggested flow:
-   *   1. Validate that at least one task is selected AND a file is staged.
-   *   2. Build FormData with the file.
-   *   3. POST to /api/upload  → get back a dataset_id.
-   *   4. POST to /api/analyze { dataset_id, tasks: selectedTasks }.
-   *   5. Navigate to a results page / show a progress toast.
-   *
-   *  Example skeleton (uncomment and adapt):
-   *
-   *  const formData = new FormData();
-   *  formData.append('file', file);
-   *  formData.append('tasks', JSON.stringify(selectedTasks));
-   *
-   *  const res = await fetch('/api/analyze', {
-   *    method: 'POST',
-   *    body: formData,
-   *  });
-   *  const data = await res.json();
-   *  // navigate('/results', { state: data });
-   *
-   * ────────────────────────────────────────────────────────── */
-  const handleAnalyze = async () => {
-    if (!file) {
-      setErrorMsg('Please upload a dataset first.');
-      return;
+    // Auto-trigger analysis if a file is provided and tasks are selected.
+    if (newFile && selectedTasks.length > 0) {
+      setIsAnalyzing(true);
+      
+      try {
+        /* ── TODO: replace this stub with your real API call ── */
+        console.log('[OmniSight] Sending to backend:', {
+          file: newFile.name,
+          tasks: selectedTasks,
+        });
+
+        /* Simulate a brief network delay for demo purposes */
+        await new Promise((r) => setTimeout(r, 1500));
+
+        alert(`✅ Submitted!\nFile: ${newFile.name}\nTasks: ${selectedTasks.join(', ')}`);
+      } catch (err) {
+        setErrorMsg(`Analysis failed: ${err.message}`);
+      } finally {
+        setIsAnalyzing(false);
+      }
     }
-    if (selectedTasks.length === 0) {
-      setErrorMsg('Please select at least one analysis task.');
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setErrorMsg('');
-
-    try {
-      /* ── TODO: replace this stub with your real API call ── */
-      console.log('[OmniSight] Sending to backend:', {
-        file: file.name,
-        tasks: selectedTasks,
-      });
-
-      /* Simulate a brief network delay for demo purposes */
-      await new Promise((r) => setTimeout(r, 1500));
-
-      alert(`✅ Submitted!\nFile: ${file.name}\nTasks: ${selectedTasks.join(', ')}`);
-    } catch (err) {
-      setErrorMsg(`Analysis failed: ${err.message}`);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
+  }, [selectedTasks]);
 
   /* ── Render ── */
   return (
@@ -117,44 +83,18 @@ export default function App() {
             onToggleTask={handleToggleTask}
           />
 
-          <FileUploader
-            file={file}
-            onFileChange={handleFileChange}
-          />
+          {selectedTasks.length > 0 && (
+            <FileUploader
+              file={file}
+              onFileChange={handleFileChange}
+              isAnalyzing={isAnalyzing}
+            />
+          )}
 
           {/* ── Error feedback ── */}
           {errorMsg && (
             <p className="hero-section__error" role="alert">{errorMsg}</p>
           )}
-
-          {/* ── Analyze CTA ── */}
-          <div className="hero-section__cta">
-            <button
-              id="analyze-btn"
-              className={`analyze-btn ${isAnalyzing ? 'analyze-btn--loading' : ''}`}
-              onClick={handleAnalyze}
-              disabled={isAnalyzing}
-              aria-busy={isAnalyzing}
-            >
-              {isAnalyzing ? (
-                <>
-                  <span className="analyze-btn__spinner" aria-hidden="true" />
-                  Analyzing…
-                </>
-              ) : (
-                <>
-                  <span className="analyze-btn__icon" aria-hidden="true">⚡</span>
-                  Analyze
-                </>
-              )}
-            </button>
-
-            {selectedTasks.length > 0 && (
-              <p className="hero-section__task-count">
-                {selectedTasks.length} task{selectedTasks.length > 1 ? 's' : ''} selected
-              </p>
-            )}
-          </div>
         </div>
       </section>
 

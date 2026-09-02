@@ -1,158 +1,157 @@
-/* FileUploader Styles — compact for single-viewport fit */
+/* FileUploader — sleek button design with CSS enter animation */
+
+/* ── Container with Entry Animation ── */
 .file-uploader {
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 0 var(--sp-4) 0;   /* removed bottom padding (was var(--sp-8)) */
+  display: flex;
+  justify-content: center;
+  padding: 0 var(--sp-4);
+  /* Animation so it doesn't jarringly shift layout when conditionally rendered */
+  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ── Dropzone ── */
+@keyframes slideUpFade {
+  0% {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── The Slim Dropzone Button ── */
 .dropzone {
-  display: block;
-  width: 100%;
-  border: 2px dashed rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(10px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding: 0.6rem 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-pill);
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
   transition:
-    border-color 0.25s ease,
     background 0.25s ease,
+    border-color 0.25s ease,
     transform 0.2s ease,
     box-shadow 0.25s ease;
-  min-height: 90px;            /* was 150px — cut by 40% */
 }
 
 .dropzone:hover,
 .dropzone--dragging {
+  background: rgba(34, 197, 94, 0.1);
   border-color: var(--color-accent-green-soft);
-  background: rgba(34, 197, 94, 0.08);
-  transform: scale(1.01);
-  box-shadow: 0 0 30px rgba(74, 222, 128, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(74, 222, 128, 0.15);
 }
 
-.dropzone--has-file {
-  border-style: solid;
-  border-color: rgba(74, 222, 128, 0.35);
-  background: rgba(74, 222, 128, 0.07);
+.dropzone--analyzing {
+  background: rgba(249, 115, 22, 0.1);
+  border-color: rgba(249, 115, 22, 0.4);
+  cursor: not-allowed;
+  transform: none;
+}
+.dropzone--analyzing:hover {
+  transform: none;
+  box-shadow: none;
 }
 
-.dropzone__input { display: none; }
+.dropzone__input {
+  display: none;
+}
 
-/* ── Empty state ── */
+/* ── Empty State Content ── */
 .dropzone__empty {
   display: flex;
-  flex-direction: row;         /* switch to row to save vertical space */
   align-items: center;
-  justify-content: center;
-  gap: var(--sp-4);
-  padding: var(--sp-3) var(--sp-6);  /* was var(--sp-8) → cut from 2rem to 0.75rem */
-  text-align: left;
+  gap: var(--sp-2);
 }
 
-.dropzone__icon-wrap {
-  width: 40px;                 /* was 52px */
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(74, 222, 128, 0.12);
-  border: 1px solid rgba(74, 222, 128, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.25s ease;
-}
-
-.dropzone:hover .dropzone__icon-wrap { background: rgba(74, 222, 128, 0.22); }
-
-.dropzone__upload-icon {
-  font-size: 1.1rem;           /* was 1.4rem */
+.dropzone__upload-icon,
+.dropzone__file-icon {
+  font-size: 1.1rem;
   color: var(--color-accent-green);
-}
-
-.dropzone__text-group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .dropzone__title {
-  font-size: 0.9rem;           /* was 1rem */
+  font-size: 0.95rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  color: #fff;
+  letter-spacing: 0.02em;
 }
-
-.dropzone__subtitle {
-  font-size: 0.78rem;          /* was 0.875rem */
-  color: rgba(255, 255, 255, 0.45);
-}
-
-.dropzone__browse-link {
-  color: var(--color-accent-green);
-  text-decoration: underline;
-  text-decoration-color: transparent;
-  transition: text-decoration-color 0.2s;
-}
-.dropzone:hover .dropzone__browse-link { text-decoration-color: var(--color-accent-green); }
 
 .dropzone__formats {
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.25);
-  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: var(--sp-2);
 }
 
-/* ── File-loaded state ── */
+/* ── File-Loaded State ── */
 .dropzone__file-info {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-6);  /* was var(--sp-6) */
-}
-
-.dropzone__file-icon {
-  font-size: 1.6rem;           /* was 2rem */
-  flex-shrink: 0;
+  max-width: 300px;
 }
 
 .dropzone__file-meta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1;
   min-width: 0;
 }
 
 .dropzone__file-name {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .dropzone__file-size {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1;
 }
 
 .dropzone__remove {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.72rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  cursor: pointer;
   transition: background 0.2s, color 0.2s;
+  margin-left: var(--sp-2);
 }
 
 .dropzone__remove:hover {
   background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.4);
   color: #f87171;
+}
+
+/* ── Loading Spinner ── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.dropzone__spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin-right: var(--sp-1);
 }

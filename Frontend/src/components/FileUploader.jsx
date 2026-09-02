@@ -2,45 +2,30 @@ import React, { useCallback, useState } from 'react';
 import './FileUploader.css';
 
 /**
- * FileUploader
+ * FileUploader — Slim button design
  *
- * A drag-and-drop + click-to-browse file dropzone.
- *
- * ── HOW TO WIRE TO FASTAPI ──
- * When the user clicks "Analyze" (or you trigger submission),
- * build a FormData object and POST to your upload endpoint:
- *
- *   const formData = new FormData();
- *   formData.append('file', file);
- *   // Optionally attach selected tasks:
- *   formData.append('tasks', JSON.stringify(selectedTasks));
- *
- *   const response = await fetch('/api/upload', {
- *     method: 'POST',
- *     body: formData,
- *   });
- *   const result = await response.json();
- *
- * Props:
- *   file        {File | null}   — currently staged file
- *   onFileChange {(file: File | null) => void}  — setter callback
+ * Supports drag-and-drop or click-to-browse.
+ * Accepts an isAnalyzing prop to show a loading spinner,
+ * since it now acts as the primary action trigger for the page.
  */
-export default function FileUploader({ file, onFileChange }) {
+export default function FileUploader({ file, onFileChange, isAnalyzing }) {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDrop = useCallback(
     (e) => {
       e.preventDefault();
       setIsDragging(false);
+      if (isAnalyzing) return; // Prevent new drops while loading
+
       const dropped = e.dataTransfer.files?.[0];
       if (dropped) onFileChange(dropped);
     },
-    [onFileChange]
+    [onFileChange, isAnalyzing]
   );
 
   const handleDragOver = (e) => {
     e.preventDefault();
-    setIsDragging(true);
+    if (!isAnalyzing) setIsDragging(true);
   };
 
   const handleDragLeave = () => setIsDragging(false);
@@ -48,33 +33,43 @@ export default function FileUploader({ file, onFileChange }) {
   const handleBrowse = (e) => {
     const picked = e.target.files?.[0];
     if (picked) onFileChange(picked);
-    /* Reset input so the same file can be re-selected */
     e.target.value = '';
   };
 
   const handleRemove = () => onFileChange(null);
 
+  // Compute CSS classes based on state
+  let classes = 'dropzone';
+  if (isDragging) classes += ' dropzone--dragging';
+  if (isAnalyzing) classes += ' dropzone--analyzing';
+
   return (
     <div className="file-uploader">
+      {/* We use a label so clicking anywhere on the "button" triggers the file input */}
       <label
         id="file-dropzone"
-        className={`dropzone ${isDragging ? 'dropzone--dragging' : ''} ${file ? 'dropzone--has-file' : ''}`}
+        className={classes}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         htmlFor="file-input"
+        aria-busy={isAnalyzing}
       >
-        {/* Hidden native file input */}
         <input
           id="file-input"
           type="file"
           className="dropzone__input"
           onChange={handleBrowse}
-          /* Accept common data formats — adjust to match your backend */
           accept=".csv,.xlsx,.xls,.json,.parquet,.tsv"
+          disabled={isAnalyzing}
         />
 
-        {file ? (
+        {isAnalyzing ? (
+          <div className="dropzone__empty">
+            <span className="dropzone__spinner" aria-hidden="true" />
+            <span className="dropzone__title">Analyzing dataset...</span>
+          </div>
+        ) : file ? (
           <div className="dropzone__file-info">
             <span className="dropzone__file-icon">📄</span>
             <div className="dropzone__file-meta">
@@ -84,8 +79,12 @@ export default function FileUploader({ file, onFileChange }) {
               </span>
             </div>
             <button
+              type="button"
               className="dropzone__remove"
-              onClick={(e) => { e.preventDefault(); handleRemove(); }}
+              onClick={(e) => { 
+                e.preventDefault(); // Stop label from opening file dialog again
+                handleRemove(); 
+              }}
               title="Remove file"
               aria-label="Remove file"
             >
@@ -94,16 +93,9 @@ export default function FileUploader({ file, onFileChange }) {
           </div>
         ) : (
           <div className="dropzone__empty">
-            <div className="dropzone__icon-wrap">
-              <span className="dropzone__upload-icon">⬆</span>
-            </div>
-            <div className="dropzone__text-group">
-              <p className="dropzone__title">Drop your dataset here</p>
-              <p className="dropzone__subtitle">
-                or <span className="dropzone__browse-link">click to browse</span>
-              </p>
-              <p className="dropzone__formats">CSV · XLSX · JSON · Parquet · TSV</p>
-            </div>
+            <span className="dropzone__upload-icon">↑</span>
+            <span className="dropzone__title">Upload Dataset</span>
+            <span className="dropzone__formats">(CSV, JSON, XLSX...)</span>
           </div>
         )}
       </label>
