@@ -1,0 +1,154 @@
+/* FileUploader — sleek button design with CSS enter animation */
+
+/* ── Container with Entry Animation & Spacing ── */
+.file-uploader {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 0 var(--sp-4);
+  margin-top: 32px;            /* significantly increased distance above upload data button */
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.file-uploader--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+}
+
+/* ── Solid Singular Colored Upload Button ── */
+.dropzone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding: 0.7rem 2.2rem;
+  background: #16a34a;                 /* solid singular green background */
+  border: 1.5px solid #15803d;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.2s ease,
+    box-shadow 0.25s ease;
+}
+
+.dropzone:hover,
+.dropzone--dragging {
+  background: #15803d;                 /* solid hover background */
+  border-color: #166534;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(22, 163, 74, 0.4);
+}
+
+.dropzone--analyzing {
+  background: #ea580c;                 /* solid analyzing background */
+  border-color: #c2410c;
+  cursor: not-allowed;
+  transform: none;
+}
+.dropzone--analyzing:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.dropzone__input {
+  display: none;
+}
+
+/* ── Empty State Content ── */
+.dropzone__empty {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.dropzone__upload-icon,
+.dropzone__file-icon {
+  font-size: 1.1rem;
+  color: #ffffff;                      /* crisp white icon */
+}
+
+.dropzone__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;                      /* crisp white title */
+  letter-spacing: 0.02em;
+}
+
+.dropzone__formats {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.85);    /* high contrast subtext */
+  margin-left: var(--sp-2);
+}
+
+/* ── File-Loaded State ── */
+.dropzone__file-info {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  max-width: 300px;
+}
+
+.dropzone__file-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dropzone__file-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropzone__file-size {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1;
+}
+
+.dropzone__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  margin-left: var(--sp-2);
+}
+
+.dropzone__remove:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+}
+
+/* ── Loading Spinner ── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.dropzone__spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin-right: var(--sp-1);
+}

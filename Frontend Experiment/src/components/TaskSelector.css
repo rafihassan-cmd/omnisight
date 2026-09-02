@@ -1,0 +1,111 @@
+/* TaskSelector Styles — sleek 5-card flex grid */
+.task-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 0 var(--sp-2);
+  width: 100%;
+  margin-top: 32px;            /* significantly increased distance below 'AI' slogan text */
+}
+
+.task-selector__question {
+  font-family: var(--font-body);
+  font-size: clamp(1rem, 2.2vw, 1.3rem);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  text-align: center;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;         /* increased distance below text */
+}
+
+/* ── Single horizontal row (5 cards) ── */
+.task-selector__grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--sp-2);
+  width: 100%;
+  max-width: 1100px; /* span wide comfortably on desktop */
+}
+
+/* ── Standalone Square Vertical Button Card ── */
+.task-card {
+  width: 100%;
+  min-height: 88px;
+  cursor: pointer;
+  
+  background: #f59e0b;                 /* rich solid yellowish-orange background for all buttons */
+  border: 1.5px solid #d97706;
+  border-radius: 14px;                 /* compact square card shape */
+  padding: 12px 8px;
+  
+  display: flex;
+  flex-direction: column;             /* vertical orientation: icon on top, text below */
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Hover State ── */
+.task-card:hover {
+  background: #fbbf24;                 /* brighter yellowish-orange on hover */
+  border-color: #f59e0b;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
+}
+
+/* ── Active / Selected State ── */
+.task-card--selected {
+  background: #ea580c;                 /* vibrant deep orange for active state */
+  border-color: #ffffff;               /* crisp white border */
+  box-shadow: 0 0 22px rgba(234, 88, 12, 0.5); /* deep orange glow */
+}
+
+.task-card--selected:hover {
+  background: #f97316;
+  transform: translateY(-4px);
+}
+
+/* ── Internal Typography & Icons ── */
+.task-card__icon {
+  width: 22px;
+  height: 22px;
+  color: #0f1f1a;                      /* crisp dark contrast icon on yellow-orange */
+  flex-shrink: 0;
+}
+
+.task-card--selected .task-card__icon {
+  color: #ffffff;                      /* white icon on active deep orange */
+}
+
+.task-card__title {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0f1f1a;                      /* high contrast dark text on yellow-orange */
+  margin: 0;
+  letter-spacing: -0.01em;
+  text-align: center;                  /* centered text for vertical layout */
+  line-height: 1.2;
+  white-space: normal;                 /* allows clean multi-line wrapping in square buttons */
+}
+
+.task-card--selected .task-card__title {
+  color: #ffffff;                      /* white text on active deep orange */
+}
+
+/* ── Mobile adjustments ── */
+@media (max-width: 900px) {
+  .task-selector__grid {
+    grid-template-columns: repeat(3, 1fr); /* 3 top, 2 bot if compressed */
+    max-width: 700px;
+  }
+}
+@media (max-width: 600px) {
+  .task-selector__grid {
+    grid-template-columns: 1fr;
+  }
+}
