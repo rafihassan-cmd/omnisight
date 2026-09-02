@@ -83,13 +83,12 @@ export default function App() {
             onToggleTask={handleToggleTask}
           />
 
-          {selectedTasks.length > 0 && (
-            <FileUploader
-              file={file}
-              onFileChange={handleFileChange}
-              isAnalyzing={isAnalyzing}
-            />
-          )}
+          <FileUploader
+            isVisible={selectedTasks.length > 0}
+            file={file}
+            onFileChange={handleFileChange}
+            isAnalyzing={isAnalyzing}
+          />
 
           {/* ── Error feedback ── */}
         </div>

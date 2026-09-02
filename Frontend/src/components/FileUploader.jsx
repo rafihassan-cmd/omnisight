@@ -8,29 +8,30 @@ import './FileUploader.css';
  * Accepts an isAnalyzing prop to show a loading spinner,
  * since it now acts as the primary action trigger for the page.
  */
-export default function FileUploader({ file, onFileChange, isAnalyzing }) {
+export default function FileUploader({ file, onFileChange, isAnalyzing, isVisible = true }) {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDrop = useCallback(
     (e) => {
       e.preventDefault();
       setIsDragging(false);
-      if (isAnalyzing) return; // Prevent new drops while loading
+      if (isAnalyzing || !isVisible) return; // Prevent new drops while loading or hidden
 
       const dropped = e.dataTransfer.files?.[0];
       if (dropped) onFileChange(dropped);
     },
-    [onFileChange, isAnalyzing]
+    [onFileChange, isAnalyzing, isVisible]
   );
 
   const handleDragOver = (e) => {
     e.preventDefault();
-    if (!isAnalyzing) setIsDragging(true);
+    if (!isAnalyzing && isVisible) setIsDragging(true);
   };
 
   const handleDragLeave = () => setIsDragging(false);
 
   const handleBrowse = (e) => {
+    if (!isVisible) return;
     const picked = e.target.files?.[0];
     if (picked) onFileChange(picked);
     e.target.value = '';
@@ -44,7 +45,7 @@ export default function FileUploader({ file, onFileChange, isAnalyzing }) {
   if (isAnalyzing) classes += ' dropzone--analyzing';
 
   return (
-    <div className="file-uploader">
+    <div className={`file-uploader ${!isVisible ? 'file-uploader--hidden' : ''}`}>
       {/* We use a label so clicking anywhere on the "button" triggers the file input */}
       <label
         id="file-dropzone"
