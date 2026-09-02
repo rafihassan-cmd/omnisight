@@ -1,111 +1,101 @@
-/* TaskSelector Styles — compact for single-viewport fit */
+/* TaskSelector Styles — sleek 5-card flex grid */
 .task-selector {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--sp-3);           /* was var(--sp-8) → cut from 2rem to 0.75rem */
-  padding: 0 var(--sp-4);    /* was var(--sp-4) all around */
+  gap: var(--sp-2);
+  padding: 0 var(--sp-2);
   width: 100%;
-  max-width: 900px;
-  margin: 0 auto;
 }
 
 .task-selector__question {
   font-family: var(--font-body);
-  font-size: clamp(1rem, 2.2vw, 1.3rem);  /* was clamp(1.2rem, 3vw, 1.65rem) */
+  font-size: clamp(1rem, 2.2vw, 1.3rem);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.88);
   text-align: center;
   letter-spacing: -0.02em;
+  margin-bottom: 2px;
 }
 
-/* ── Three-column card grid ── */
+/* ── Single horizontal row (5 cards) ── */
 .task-selector__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--sp-3);           /* was var(--sp-4) */
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--sp-2);
   width: 100%;
+  max-width: 1100px; /* span wide comfortably on desktop */
 }
 
-@media (max-width: 700px) {
-  .task-selector__grid { grid-template-columns: 1fr; }
-}
-
-/* ── Task Card ── */
+/* ── Standalone Compact Button Card ── */
 .task-card {
+  width: 100%;
+  min-height: auto;
+  cursor: pointer;
+  
   background: var(--card-glass);
   border: 1px solid var(--card-glass-border);
-  border-radius: var(--radius-lg);
-  padding: var(--sp-3) var(--sp-4);  /* was var(--sp-6) → cut from 1.5rem to 0.75rem vertical */
+  border-radius: var(--radius-md); /* slightly sharper for slim buttons */
+  padding: 10px 14px;
+  
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);                  /* was var(--sp-4) */
+  flex-direction: row;        /* icon and text side-by-side */
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  
   backdrop-filter: blur(12px);
-  transition: border-color 0.25s ease, background 0.25s ease, transform 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ── Hover State ── */
 .task-card:hover {
   background: var(--card-glass-hover);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
-.task-card__heading {
-  font-size: 0.72rem;           /* was 0.85rem */
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
+/* ── Active / Selected State ── */
+.task-card--selected {
+  background: rgba(20, 184, 166, 0.10); /* subtle teal tint */
+  border-color: #14b8a6;                /* vibrant teal stroke */
+  box-shadow: 0 0 24px rgba(20, 184, 166, 0.25); /* teal glow */
 }
 
-/* ── Pill Buttons ── */
-.task-card__pills {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);            /* was var(--sp-2) */
+.task-card--selected:hover {
+  background: rgba(20, 184, 166, 0.15);
+  transform: translateY(-4px);
 }
 
-.task-pill {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: 0.3rem var(--sp-3); /* was var(--sp-2) var(--sp-4) */
-  border-radius: var(--radius-pill);
-  font-size: 0.8rem;           /* was 0.875rem */
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.75);
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  text-align: left;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
-}
-
-.task-pill:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  color: #fff;
-  transform: translateX(3px);
-}
-
-.task-pill--selected {
-  background: var(--card-selected-bg);
-  border-color: var(--card-selected-border);
-  color: var(--color-accent-green);
-  box-shadow: 0 0 14px rgba(74, 222, 128, 0.2);
-}
-
-.task-pill--selected:hover {
-  background: rgba(74, 222, 128, 0.22);
-  transform: translateX(3px);
-}
-
-.task-pill__check {
-  font-size: 0.7rem;
-  color: var(--color-accent-green);
+/* ── Internal Typography & Icons ── */
+.task-card__icon {
+  width: 18px;
+  height: 18px;
+  color: #14b8a6; /* keep icons distinctly teal */
   flex-shrink: 0;
+}
+
+.task-card__title {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+  white-space: nowrap; /* prevent awkward stacking on single row */
+}
+
+/* ── Mobile adjustments ── */
+@media (max-width: 900px) {
+  .task-selector__grid {
+    grid-template-columns: repeat(3, 1fr); /* 3 top, 2 bot if compressed */
+    max-width: 700px;
+  }
+}
+@media (max-width: 600px) {
+  .task-selector__grid {
+    grid-template-columns: 1fr;
+  }
 }

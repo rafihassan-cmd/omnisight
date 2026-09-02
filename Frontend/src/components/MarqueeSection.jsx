@@ -2,12 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import './MarqueeSection.css';
 
+import dataCleaningImg from '../../images/data cleaning.png';
+import dataVisImg from '../../images/data visualization.jpg';
+import statisticsImg from '../../images/statistics.jpg';
+
 const SERVICE_CARDS = [
-  { title: 'Clean data',               desc: 'Automated data cleaning & validation' },
-  { title: 'Visualize your data',      desc: 'Interactive charts & rich dashboards' },
-  { title: 'Plot results',             desc: 'Publication-ready plots & exports' },
-  { title: 'Check statistics',         desc: 'Descriptive & inferential analysis' },
-  { title: 'See intelligence summary', desc: 'AI-generated insights & narratives' },
+  { title: 'Clean data',               desc: 'Automated data cleaning & validation', imageSrc: dataCleaningImg },
+  { title: 'Visualize your data',      desc: 'Interactive charts & rich dashboards', imageSrc: dataVisImg },
+  { title: 'Plot results',             desc: 'Publication-ready plots & exports',   imageSrc: dataVisImg },
+  { title: 'Check statistics',         desc: 'Descriptive & inferential analysis',   imageSrc: statisticsImg },
+  { title: 'See intelligence summary', desc: 'AI-generated insights & narratives',   imageSrc: statisticsImg },
 ];
 
 /* ── Easing ── */
@@ -33,13 +37,57 @@ function roundedRect(ctx, x, y, w, h, r) {
 }
 
 /**
- * createCardTexture
- * Landscape-oriented card (1000×240): wide and short so it fits in a
- * compact 140px stage without looking squeezed.
- * No images/emojis — bold title, muted description, teal accents.
+ * drawCenteredText
+ * Formats and draws title text centered within specified bounds.
  */
-function createCardTexture(title, desc) {
-  const CW = 1000, CH = 240;
+function drawCenteredText(ctx, text, centerX, centerY, maxWidth) {
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#0f1f1a';
+
+  const words = text.split(' ');
+  let fontSize = 64;
+  ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
+
+  let lines = [text];
+  if (ctx.measureText(text).width > maxWidth && words.length > 1) {
+    if (words.length === 3) {
+      lines = [words[0] + ' ' + words[1], words[2]];
+    } else if (words.length === 2) {
+      lines = [words[0], words[1]];
+    } else {
+      const mid = Math.ceil(words.length / 2);
+      lines = [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
+    }
+  }
+
+  for (const l of lines) {
+    while (ctx.measureText(l).width > maxWidth && fontSize > 36) {
+      fontSize -= 4;
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
+    }
+  }
+
+  const lineHeight = fontSize * 1.25;
+  const totalHeight = lines.length * lineHeight;
+  const startY = centerY - (totalHeight / 2) + (lineHeight / 2);
+
+  lines.forEach((line, i) => {
+    ctx.fillText(line, centerX, startY + i * lineHeight);
+  });
+
+  ctx.restore();
+}
+
+/**
+ * createCardTexture
+ * Split-layout card (1250×480):
+ *  • Left half: Centered task title text
+ *  • Right half: Contain-fit task image with rounded borders & async loading
+ */
+function createCardTexture(title, desc, imageSrc) {
+  const CW = 1250, CH = 480;
   const canvas = document.createElement('canvas');
   canvas.width  = CW;
   canvas.height = CH;
@@ -47,12 +95,12 @@ function createCardTexture(title, desc) {
 
   /* ── Card shadow ── */
   ctx.shadowColor   = 'rgba(0, 0, 0, 0.13)';
-  ctx.shadowBlur    = 28;
-  ctx.shadowOffsetY = 8;
+  ctx.shadowBlur    = 56;
+  ctx.shadowOffsetY = 16;
 
   /* ── White card background ── */
   ctx.fillStyle = '#ffffff';
-  roundedRect(ctx, 14, 10, CW - 28, CH - 28, 20);
+  roundedRect(ctx, 28, 20, CW - 56, CH - 56, 40);
   ctx.fill();
 
   /* Reset shadow */
@@ -62,42 +110,96 @@ function createCardTexture(title, desc) {
 
   /* ── Left vertical teal accent bar ── */
   ctx.fillStyle = '#14b8a6';
-  roundedRect(ctx, 14, 10, 7, CH - 28, 4);
+  roundedRect(ctx, 28, 20, 14, CH - 56, 8);
   ctx.fill();
 
   /* ── Subtle border ── */
   ctx.strokeStyle = 'rgba(20, 184, 166, 0.2)';
-  ctx.lineWidth   = 1.5;
-  roundedRect(ctx, 14, 10, CW - 28, CH - 28, 20);
+  ctx.lineWidth   = 3;
+  roundedRect(ctx, 28, 20, CW - 56, CH - 56, 40);
   ctx.stroke();
 
   /* ── Radial glow — bottom right ── */
   const grd = ctx.createRadialGradient(
-    CW - 80, CH - 30, 0,
-    CW - 80, CH - 30, 180
+    CW - 160, CH - 60, 0,
+    CW - 160, CH - 60, 360
   );
   grd.addColorStop(0, 'rgba(74, 222, 128, 0.09)');
   grd.addColorStop(1, 'rgba(74, 222, 128, 0)');
-  roundedRect(ctx, 14, 10, CW - 28, CH - 28, 20);
+  roundedRect(ctx, 28, 20, CW - 56, CH - 56, 40);
   ctx.fillStyle = grd;
   ctx.fill();
 
-  /* ── Title ── */
-  ctx.fillStyle = '#0f1f1a';
-  ctx.font      = 'bold 56px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-  ctx.fillText(title, 52, 105);
+  /* ── Left Side (Text): Centered in left half ── */
+  const leftX = 52;
+  const leftW = (CW - 56) * 0.48 - 24;
+  const leftCenterX = leftX + leftW / 2;
+  const centerY = CH / 2;
 
-  /* ── Description ── */
-  ctx.fillStyle = '#5a7065';
-  ctx.font      = '32px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-  ctx.fillText(desc, 52, 155);
+  drawCenteredText(ctx, title, leftCenterX, centerY, leftW);
 
-  /* ── Bottom accent pill ── */
-  ctx.fillStyle = '#14b8a6';
-  roundedRect(ctx, 52, 180, 80, 5, 3);
-  ctx.fill();
+  /* ── Canvas Texture for Three.js ── */
+  const texture = new THREE.CanvasTexture(canvas);
 
-  return new THREE.CanvasTexture(canvas);
+  /* ── Right Side (Image): Async loading & contain fit ── */
+  if (imageSrc) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    const renderImageToCanvas = () => {
+      const rightX = 28 + (CW - 56) * 0.48;
+      const rightY = 20;
+      const rightW = (CW - 56) * 0.52;
+      const rightH = CH - 56;
+
+      const margin = 28;
+      const boxX = rightX + margin;
+      const boxY = rightY + margin;
+      const boxW = rightW - margin * 2;
+      const boxH = rightH - margin * 2;
+
+      const imgAspect = img.width / img.height;
+      const boxAspect = boxW / boxH;
+
+      let drawW, drawH, drawX, drawY;
+      if (imgAspect > boxAspect) {
+        drawW = boxW;
+        drawH = boxW / imgAspect;
+        drawX = boxX;
+        drawY = boxY + (boxH - drawH) / 2;
+      } else {
+        drawH = boxH;
+        drawW = boxH * imgAspect;
+        drawX = boxX + (boxW - drawW) / 2;
+        drawY = boxY;
+      }
+
+      ctx.save();
+      roundedRect(ctx, drawX, drawY, drawW, drawH, 18);
+      ctx.clip();
+      ctx.drawImage(img, drawX, drawY, drawW, drawH);
+      ctx.restore();
+
+      /* Subtle image border */
+      ctx.save();
+      ctx.strokeStyle = 'rgba(20, 184, 166, 0.25)';
+      ctx.lineWidth = 2;
+      roundedRect(ctx, drawX, drawY, drawW, drawH, 18);
+      ctx.stroke();
+      ctx.restore();
+
+      /* CRUCIAL STEP: Signal WebGL to upload updated canvas pixels to GPU */
+      texture.needsUpdate = true;
+    };
+
+    img.onload = renderImageToCanvas;
+    if (img.complete && img.naturalWidth !== 0) {
+      renderImageToCanvas();
+    }
+    img.src = imageSrc;
+  }
+
+  return texture;
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -133,18 +235,17 @@ export default function MarqueeSection() {
     );
     camera.position.z = 1;
 
-    /* ── Card geometry — height-constrained for compact stage ──
-     *  Canvas aspect ratio = 1000/240 ≈ 4.167
-     *  Drive size from stage height so the card never overflows vertically.
+    /* ── Card geometry — scaled down for a balanced compact card ──
+     *  Canvas aspect ratio = 1250/480 = 2.6
      */
-    const CARD_H = H * 0.76;                               // 80% of 140px ≈ 106px
-    const CARD_W = Math.min(CARD_H * (1000 / 240), W * 0.60); // maintain aspect, cap width
-    const finalH = CARD_W * (240 / 1000);                  // recalc height after width cap
+    const CARD_H = Math.min(H * 0.70, 380);                   // reduced height cap
+    const CARD_W = Math.min(CARD_H * (1250 / 480), W * 0.65); // reduced width cap
+    const finalH = CARD_W * (480 / 1250);                     // recalc height after width cap
 
     const OFFSCREEN = W / 2 + CARD_W / 2 + 60;
 
     /* ── Pre-build textures ── */
-    const textures = SERVICE_CARDS.map(c => createCardTexture(c.title, c.desc));
+    const textures = SERVICE_CARDS.map(c => createCardTexture(c.title, c.desc, c.imageSrc));
     const geo = new THREE.PlaneGeometry(CARD_W, finalH);
 
     /* Current card */
@@ -240,12 +341,7 @@ export default function MarqueeSection() {
   return (
     <section className="marquee-section" aria-label="Our core services">
 
-      <div className="marquee-section__header">
-        <h2 className="marquee-section__title">What we do</h2>
-        <p className="marquee-section__sub">
-          End-to-end data intelligence for your research pipeline
-        </p>
-      </div>
+
 
       <div ref={mountRef} className="threejs-stage" />
 

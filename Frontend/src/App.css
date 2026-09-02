@@ -6,6 +6,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: linear-gradient(180deg, #0a1a15 0%, #0e231c 60%, #122820 100%); /* ensures any empty bottom space matches the theme */
 }
 
 /* ═══════════════════════════════════════
@@ -13,8 +14,7 @@
 ════════════════════════════════════════ */
 .hero-section {
   position: relative;
-  flex: 1 1 0;                 /* fills whatever space the bottom section doesn't take */
-  min-height: 0;               /* important: allow flex child to shrink below content */
+  flex: 0 0 auto;              /* tight fit to content, yielding space to bottom */
   background:
     linear-gradient(
       160deg,
@@ -28,6 +28,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  padding-bottom: 30px;        /* Reduced padding so the dynamically rendered file uploader fits perfectly */
 }
 
 /* ── Decorative ambient orbs ── */

@@ -3,8 +3,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  padding-top: var(--sp-4);   /* was var(--sp-12) → cut from 3rem to 1rem */
+  gap: 0;
+  padding-top: var(--sp-2);   /* extremely tight top padding */
   padding-bottom: 0;
 }
 
