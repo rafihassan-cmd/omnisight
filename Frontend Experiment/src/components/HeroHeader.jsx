@@ -10,8 +10,7 @@ export default function HeroHeader() {
   return (
     <header className="hero-header">
       <div className="hero-header__logo">
-        <span className="logo-omni">Omni</span>
-        <span className="logo-sight">Sight</span>
+        <span className="logo-omnisight">ꙨmniSight</span>
       </div>
       {/* ── SLOGAN PLACEHOLDER ──
           Replace the text below with your actual slogan.

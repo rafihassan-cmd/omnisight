@@ -1,4 +1,4 @@
-/* TaskSelector Styles — sleek 5-card flex grid */
+/* TaskSelector Styles — sleek centered 4-card grid */
 .task-selector {
   display: flex;
   flex-direction: column;
@@ -6,7 +6,7 @@
   gap: 14px;
   padding: 0 var(--sp-2);
   width: 100%;
-  margin-top: 32px;            /* significantly increased distance below 'AI' slogan text */
+  margin-top: 32px;
 }
 
 .task-selector__question {
@@ -16,31 +16,33 @@
   color: rgba(255, 255, 255, 0.88);
   text-align: center;
   letter-spacing: -0.02em;
-  margin-bottom: 12px;         /* increased distance below text */
+  margin-bottom: 12px;
 }
 
-/* ── Single horizontal row (5 cards) ── */
+/* ── Centered horizontal row (4 cards) ── */
 .task-selector__grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  justify-content: center;
+  align-items: center;
   gap: var(--sp-2);
   width: 100%;
-  max-width: 1100px; /* span wide comfortably on desktop */
+  max-width: 900px; /* adjusted max-width for 4 cards */
 }
 
 /* ── Standalone Square Vertical Button Card ── */
 .task-card {
-  width: 100%;
+  flex: 1 1 0;
+  max-width: 200px;
   min-height: 88px;
   cursor: pointer;
   
-  background: #f59e0b;                 /* rich solid yellowish-orange background for all buttons */
+  background: #f59e0b;                 /* rich solid yellowish-orange background */
   border: 1.5px solid #d97706;
   border-radius: 14px;                 /* compact square card shape */
   padding: 12px 8px;
   
   display: flex;
-  flex-direction: column;             /* vertical orientation: icon on top, text below */
+  flex-direction: column;             /* vertical orientation */
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -51,7 +53,7 @@
 
 /* ── Hover State ── */
 .task-card:hover {
-  background: #fbbf24;                 /* brighter yellowish-orange on hover */
+  background: #fbbf24;
   border-color: #f59e0b;
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
@@ -59,9 +61,9 @@
 
 /* ── Active / Selected State ── */
 .task-card--selected {
-  background: #ea580c;                 /* vibrant deep orange for active state */
-  border-color: #ffffff;               /* crisp white border */
-  box-shadow: 0 0 22px rgba(234, 88, 12, 0.5); /* deep orange glow */
+  background: #ea580c;
+  border-color: #09d3ae;
+  box-shadow: 0 0 22px rgba(234, 88, 12, 0.5);
 }
 
 .task-card--selected:hover {
@@ -73,39 +75,43 @@
 .task-card__icon {
   width: 22px;
   height: 22px;
-  color: #0f1f1a;                      /* crisp dark contrast icon on yellow-orange */
+  color: #0f1f1a;
   flex-shrink: 0;
 }
 
 .task-card--selected .task-card__icon {
-  color: #ffffff;                      /* white icon on active deep orange */
+  color: #ffffff;
 }
 
 .task-card__title {
   font-family: var(--font-body);
   font-size: 0.8rem;
   font-weight: 700;
-  color: #0f1f1a;                      /* high contrast dark text on yellow-orange */
+  color: #0f1f1a;
   margin: 0;
   letter-spacing: -0.01em;
-  text-align: center;                  /* centered text for vertical layout */
+  text-align: center;
   line-height: 1.2;
-  white-space: normal;                 /* allows clean multi-line wrapping in square buttons */
+  white-space: normal;
 }
 
 .task-card--selected .task-card__title {
-  color: #ffffff;                      /* white text on active deep orange */
+  color: #ffffff;
 }
 
 /* ── Mobile adjustments ── */
-@media (max-width: 900px) {
+@media (max-width: 768px) {
   .task-selector__grid {
-    grid-template-columns: repeat(3, 1fr); /* 3 top, 2 bot if compressed */
-    max-width: 700px;
+    flex-wrap: wrap;
+  }
+  .task-card {
+    flex: 1 1 40%;
   }
 }
-@media (max-width: 600px) {
-  .task-selector__grid {
-    grid-template-columns: 1fr;
+
+@media (max-width: 480px) {
+  .task-card {
+    flex: 1 1 100%;
+    max-width: 100%;
   }
 }

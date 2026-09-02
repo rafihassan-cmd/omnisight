@@ -33,18 +33,6 @@ export const TASKS = [
     )
   },
   {
-    id: 'plot_results',
-    title: 'Plot results',
-    desc: 'Export publication-ready plots and standard visualizations.',
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="18" y1="20" x2="18" y2="10"></line>
-        <line x1="12" y1="20" x2="12" y2="4"></line>
-        <line x1="6" y1="20" x2="6" y2="14"></line>
-      </svg>
-    )
-  },
-  {
     id: 'statistics',
     title: 'Check statistics',
     desc: 'Run descriptive and inferential statistical tests easily.',
@@ -68,14 +56,14 @@ export const TASKS = [
   }
 ];
 
-export default function TaskSelector({ selectedTasks, onToggleTask }) {
+export default function TaskSelector({ selectedTask, onToggleTask }) {
   return (
     <section className="task-selector">
       <h2 className="task-selector__question">How should we analyze?</h2>
       
       <div className="task-selector__grid">
         {TASKS.map((task) => {
-          const isSelected = selectedTasks.includes(task.id);
+          const isSelected = selectedTask === task.id;
           return (
             <button
               key={task.id}

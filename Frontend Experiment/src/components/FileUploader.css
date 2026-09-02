@@ -26,8 +26,8 @@
   justify-content: center;
   gap: var(--sp-3);
   padding: 0.7rem 2.2rem;
-  background: #16a34a;                 /* solid singular green background */
-  border: 1.5px solid #15803d;
+  background: #bc5c03;                 /* solid singular green background */
+  border: 1.5px solid #09d3ae;
   border-radius: var(--radius-pill);
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);

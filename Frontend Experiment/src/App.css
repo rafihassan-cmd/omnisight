@@ -6,61 +6,35 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #0a1a15 0%, #0e231c 60%, #122820 100%);
-  /* ensures any empty bottom space matches the theme */
+  background: var(--navy, #17276D);
 }
 
 /* ═══════════════════════════════════════
-   HERO SECTION  (dark green top)
+   HERO SECTION  (top clip-path section)
 ════════════════════════════════════════ */
 .hero-section {
   position: relative;
-  z-index: 10;
-  flex: 0 0 55vh;
-  /* fixed 55vh top section block */
-  background:
-    linear-gradient(160deg,
-      rgba(249, 115, 22, 0.06) 0%,
-      transparent 40%,
-      rgba(74, 222, 128, 0.05) 100%),
-    linear-gradient(180deg, #0a1a15 0%, #0e231c 60%, #122820 100%);
+  overflow: hidden;
+  flex: 0 0 62%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  justify-content: flex-start;
+  padding-top: min(5vh, 48px);
 }
 
-/* ── Decorative ambient orbs ── */
-.hero-section__orb {
+/* ── Decorative Elliptical Blob ── */
+.hero-section__blob {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(90px);
-  pointer-events: none;
-}
-
-.hero-section__orb--a {
-  width: 500px;
-  height: 500px;
-  top: -180px;
-  left: -100px;
-  background: rgba(249, 115, 22, 0.12);
-  /* orange glow — top-left */
-}
-
-.hero-section__orb--b {
-  width: 600px;
-  height: 600px;
-  bottom: -200px;
-  right: -150px;
-  background: rgba(74, 222, 128, 0.10);
-  /* green glow — bottom-right */
+  inset: 0;
+  background: var(--green, #12A463);
+  clip-path: ellipse(58% 92% at 50% 0%);
+  z-index: 0;
 }
 
 /* ── Inner content container ── */
 .hero-section__content {
   position: relative;
-  /* above orbs */
   z-index: 1;
   display: flex;
   flex-direction: column;
@@ -68,8 +42,7 @@
   width: 100%;
   max-width: 960px;
   gap: 0.6rem;
-  /* was var(--sp-8) = 2rem → cut to 0.6rem */
-  padding: 0 var(--sp-4);
+  padding: 0 var(--sp-4, 1rem);
 }
 
 /* ── Error message ── */
@@ -78,7 +51,7 @@
   color: #f87171;
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.2);
-  padding: var(--sp-2) var(--sp-6);
-  border-radius: var(--radius-pill);
+  padding: var(--sp-2, 0.5rem) var(--sp-6, 1.5rem);
+  border-radius: var(--radius-pill, 9999px);
   text-align: center;
 }

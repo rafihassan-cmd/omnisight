@@ -1,73 +1,79 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './MarqueeSection.css';
 
-import dataCleaningImg from '../../images/data cleaning.png';
-import dataVisImg from '../../images/data visualization.jpg';
-import statisticsImg from '../../images/statistics.jpg';
-
-const SERVICE_CARDS = [
-  { title: 'Clean Data',               desc: 'Automated data cleaning & validation for spotless datasets', imageSrc: dataCleaningImg },
-  { title: 'Visualize Your Data',      desc: 'Interactive charts & rich visual dashboards',           imageSrc: dataVisImg },
-  { title: 'Plot Results',             desc: 'Publication-ready plots & exportable figures',           imageSrc: dataVisImg },
-  { title: 'Check Statistics',         desc: 'Comprehensive descriptive & inferential analysis',      imageSrc: statisticsImg },
-  { title: 'Intelligence Summary',     desc: 'Deep analytical insights & executive narratives',        imageSrc: statisticsImg },
+const SLIDES = [
+  {
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3v12" />
+        <path d="M7 10l5 5 5-5" />
+        <path d="M4 20h16" />
+      </svg>
+    ),
+    text: "Upload a CSV, JSON, or XLSX file and get a cleaned dataset in seconds."
+  },
+  {
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18" />
+        <path d="M7 14l4-5 3 3 5-7" />
+      </svg>
+    ),
+    text: "Pick from smart-recommended charts, or switch to statistics on your own terms."
+  },
+  {
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2l2.2 5.8L20 10l-5.8 2.2L12 18l-2.2-5.8L4 10l5.8-2.2z" />
+      </svg>
+    ),
+    text: "Ask for a plain-language summary — OmniSight explains outliers and trends for you."
+  },
+  {
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M7 9h10M7 13h6" />
+      </svg>
+    ),
+    text: "Export the full analysis as a polished PDF or HTML report, ready to share."
+  }
 ];
 
-/**
- * MarqueeSection — Full-bleed background slideshow
- * Crossfades high-resolution background images with dark gradient overlays
- * and crisp typography in a 100vh layout.
- */
 export default function MarqueeSection() {
   const [activeIdx, setActiveIdx] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setActiveIdx((prev) => (prev + 1) % SERVICE_CARDS.length);
+      setActiveIdx((prev) => (prev + 1) % SLIDES.length);
     }, 4000);
 
     return () => clearInterval(timer);
   }, []);
 
   return (
-    <section className="fullbleed-slideshow" aria-label="Our core services">
-      {/* ── Slide Backgrounds & Overlays ── */}
-      {SERVICE_CARDS.map((slide, index) => {
-        const isActive = index === activeIdx;
-        return (
+    <section className="marquee-section" aria-label="Feature Slideshow">
+      {/* Container Card */}
+      <div className="card-container">
+        {SLIDES.map((slide, i) => (
           <div
-            key={index}
-            className={`fullbleed-slide ${isActive ? 'fullbleed-slide--active' : ''}`}
-            aria-hidden={!isActive}
+            key={i}
+            className={`slide-content ${i === activeIdx ? 'slide-content--active' : ''}`}
           >
-            {/* Full-Bleed Background Image */}
-            <img
-              src={slide.imageSrc}
-              alt=""
-              className="fullbleed-slide__bg"
-            />
-            {/* Dark Scrim / Gradient Overlay for Text Legibility */}
-            <div className="fullbleed-slide__overlay" />
-
-            {/* Prominent Overlay Content */}
-            <div className="fullbleed-slide__content">
-              <h2 className="fullbleed-slide__title">{slide.title}</h2>
-            </div>
+            <div className="slide-icon">{slide.icon}</div>
+            <p className="slide-text">{slide.text}</p>
           </div>
-        );
-      })}
+        ))}
+      </div>
 
-      {/* ── Interactive Dots Navigation ── */}
-      <div className="fullbleed-slide__dots" role="tablist" aria-label="Slide indicators">
-        {SERVICE_CARDS.map((slide, index) => (
+      {/* Pill Indicator Dots */}
+      <div className="slide-dots" role="tablist">
+        {SLIDES.map((_, i) => (
           <button
-            key={index}
-            type="button"
-            role="tab"
-            aria-selected={index === activeIdx}
-            aria-label={`Slide ${index + 1}: ${slide.title}`}
-            className={`fullbleed-slide__dot ${index === activeIdx ? 'fullbleed-slide__dot--active' : ''}`}
-            onClick={() => setActiveIdx(index)}
+            key={i}
+            onClick={() => setActiveIdx(i)}
+            className={`slide-dot ${i === activeIdx ? 'slide-dot--active' : ''}`}
+            aria-label={`Go to slide ${i + 1}`}
           />
         ))}
       </div>
