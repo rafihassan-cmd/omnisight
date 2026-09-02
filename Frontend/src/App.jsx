@@ -1,9 +1,9 @@
 import React, { useCallback, useState } from 'react';
 import './App.css';
 
-import HeroHeader    from './components/HeroHeader';
-import TaskSelector  from './components/TaskSelector';
-import FileUploader  from './components/FileUploader';
+import HeroHeader from './components/HeroHeader';
+import TaskSelector from './components/TaskSelector';
+import FileUploader from './components/FileUploader';
 import CurvedDivider from './components/CurvedDivider';
 import MarqueeSection from './components/MarqueeSection';
 
@@ -45,7 +45,7 @@ export default function App() {
     // Auto-trigger analysis if a file is provided and tasks are selected.
     if (newFile && selectedTasks.length > 0) {
       setIsAnalyzing(true);
-      
+
       try {
         /* ── TODO: replace this stub with your real API call ── */
         console.log('[OmniSight] Sending to backend:', {

@@ -3,9 +3,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--sp-2);
+  gap: 14px;
   padding: 0 var(--sp-2);
   width: 100%;
+  margin-top: 32px;            /* significantly increased distance below 'AI' slogan text */
 }
 
 .task-selector__question {
@@ -15,7 +16,7 @@
   color: rgba(255, 255, 255, 0.88);
   text-align: center;
   letter-spacing: -0.02em;
-  margin-bottom: 2px;
+  margin-bottom: 12px;         /* increased distance below text */
 }
 
 /* ── Single horizontal row (5 cards) ── */

@@ -6,7 +6,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #0a1a15 0%, #0e231c 60%, #122820 100%); /* ensures any empty bottom space matches the theme */
+  background: linear-gradient(180deg, #0a1a15 0%, #0e231c 60%, #122820 100%);
+  /* ensures any empty bottom space matches the theme */
 }
 
 /* ═══════════════════════════════════════
@@ -14,21 +15,21 @@
 ════════════════════════════════════════ */
 .hero-section {
   position: relative;
-  flex: 0 0 auto;              /* tight fit to content, yielding space to bottom */
+  flex: 0 0 auto;
+  /* tight fit to content, yielding space to bottom */
   background:
-    linear-gradient(
-      160deg,
+    linear-gradient(160deg,
       rgba(249, 115, 22, 0.06) 0%,
       transparent 40%,
-      rgba(74, 222, 128, 0.05) 100%
-    ),
+      rgba(74, 222, 128, 0.05) 100%),
     linear-gradient(180deg, #0a1a15 0%, #0e231c 60%, #122820 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding-bottom: 0px;         /* CurvedDivider sits at the bottom of the gradient seamlessly */
+  padding-bottom: 0px;
+  /* CurvedDivider sits at the bottom of the gradient seamlessly */
 }
 
 /* ── Decorative ambient orbs ── */
@@ -44,7 +45,8 @@
   height: 500px;
   top: -180px;
   left: -100px;
-  background: rgba(249, 115, 22, 0.12);  /* orange glow — top-left */
+  background: rgba(249, 115, 22, 0.12);
+  /* orange glow — top-left */
 }
 
 .hero-section__orb--b {
@@ -52,19 +54,22 @@
   height: 600px;
   bottom: -200px;
   right: -150px;
-  background: rgba(74, 222, 128, 0.10);  /* green glow — bottom-right */
+  background: rgba(74, 222, 128, 0.10);
+  /* green glow — bottom-right */
 }
 
 /* ── Inner content container ── */
 .hero-section__content {
-  position: relative;  /* above orbs */
+  position: relative;
+  /* above orbs */
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
   max-width: 960px;
-  gap: 0.6rem;               /* was var(--sp-8) = 2rem → cut to 0.6rem */
+  gap: 0.6rem;
+  /* was var(--sp-8) = 2rem → cut to 0.6rem */
   padding: 0 var(--sp-4);
 }
 
@@ -78,4 +83,3 @@
   border-radius: var(--radius-pill);
   text-align: center;
 }
-
