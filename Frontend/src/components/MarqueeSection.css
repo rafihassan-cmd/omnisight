@@ -1,0 +1,83 @@
+/* MarqueeSection — compact, no-scroll layout within 100vh */
+
+.marquee-section {
+  flex: 0 0 auto;              /* fixed-size bottom panel — doesn't grow or shrink */
+  background: var(--color-bg-bottom);
+  padding: 10px 0 8px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Ambient glow */
+.marquee-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 60% 80% at 50% 100%,
+    rgba(20, 184, 166, 0.07) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+/* ── Section header ── */
+.marquee-section__header {
+  text-align: center;
+  padding: 0 var(--sp-4);
+  position: relative;
+  z-index: 1;
+  line-height: 1.2;
+}
+
+.marquee-section__title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;          /* was clamp(1.8rem, 4vw, 3rem) → drastically smaller */
+  font-weight: 800;
+  color: #1a2e27;
+  letter-spacing: -0.02em;
+}
+
+.marquee-section__sub {
+  margin-top: 2px;
+  font-size: 0.72rem;          /* was 1rem */
+  color: #5a7065;
+  line-height: 1.4;
+}
+
+/* ── Three.js canvas container ── */
+.threejs-stage {
+  width: 100%;
+  height: 140px;               /* was 300px — landscape cards fit at this height */
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* ── Dot indicators ── */
+.slide-dots {
+  display: flex;
+  gap: 7px;
+  position: relative;
+  z-index: 1;
+}
+
+.slide-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(20, 184, 166, 0.25);
+  border: 1.5px solid rgba(20, 184, 166, 0.35);
+  transition: background 0.3s ease, transform 0.3s ease, width 0.3s ease;
+  cursor: default;
+}
+
+.slide-dot--active {
+  background: #14b8a6;
+  border-color: #14b8a6;
+  width: 18px;
+  border-radius: 3px;
+}

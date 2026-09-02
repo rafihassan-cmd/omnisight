@@ -1,0 +1,59 @@
+/* ============================================================
+   OmniSight — Global CSS
+   Design tokens, resets, fonts
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Syne:wght@700;800&display=swap');
+
+/* ── Design Tokens ── */
+:root {
+  /* Core palette */
+  --color-bg-top: #0e1f1a;          /* dark green hero */
+  --color-bg-top-mid: #122820;
+  --color-bg-bottom: #f5f2eb;       /* warm cream contrast */
+  --color-accent-orange: #f97316;   /* Omni */
+  --color-accent-green: #4ade80;    /* Sight */
+  --color-accent-green-soft: #22c55e;
+  --color-accent-teal: #14b8a6;
+
+  /* Card & glass */
+  --card-glass: rgba(255, 255, 255, 0.05);
+  --card-glass-border: rgba(255, 255, 255, 0.10);
+  --card-glass-hover: rgba(255, 255, 255, 0.10);
+  --card-selected-bg: rgba(74, 222, 128, 0.15);
+  --card-selected-border: rgba(74, 222, 128, 0.50);
+
+  /* Typography */
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Spacing scale */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-12: 3rem;
+  --sp-16: 4rem;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 9999px;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg-top);
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+img, svg { display: block; max-width: 100%; }
+button { cursor: pointer; border: none; background: none; font: inherit; }

@@ -1,0 +1,164 @@
+/* App.css — OmniSight homepage layout & hero section */
+
+/* ── Root wrapper ── */
+.omnisight-root {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════
+   HERO SECTION  (dark green top)
+════════════════════════════════════════ */
+.hero-section {
+  position: relative;
+  flex: 1 1 0;                 /* fills whatever space the bottom section doesn't take */
+  min-height: 0;               /* important: allow flex child to shrink below content */
+  background:
+    linear-gradient(
+      160deg,
+      rgba(249, 115, 22, 0.06) 0%,
+      transparent 40%,
+      rgba(74, 222, 128, 0.05) 100%
+    ),
+    linear-gradient(180deg, #0a1a15 0%, #0e231c 60%, #122820 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ── Decorative ambient orbs ── */
+.hero-section__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  pointer-events: none;
+}
+
+.hero-section__orb--a {
+  width: 500px;
+  height: 500px;
+  top: -180px;
+  left: -100px;
+  background: rgba(249, 115, 22, 0.12);  /* orange glow — top-left */
+}
+
+.hero-section__orb--b {
+  width: 600px;
+  height: 600px;
+  bottom: -200px;
+  right: -150px;
+  background: rgba(74, 222, 128, 0.10);  /* green glow — bottom-right */
+}
+
+/* ── Inner content container ── */
+.hero-section__content {
+  position: relative;  /* above orbs */
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 960px;
+  gap: 0.6rem;               /* was var(--sp-8) = 2rem → cut to 0.6rem */
+  padding: 0 var(--sp-4);
+}
+
+/* ── Error message ── */
+.hero-section__error {
+  font-size: 0.875rem;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: var(--sp-2) var(--sp-6);
+  border-radius: var(--radius-pill);
+  text-align: center;
+}
+
+/* ── CTA block ── */
+.hero-section__cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-bottom: 0;           /* was var(--sp-4) — removed */
+}
+
+.hero-section__task-count {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.03em;
+}
+
+/* ════════════════════════════════════
+   ANALYZE BUTTON
+════════════════════════════════════ */
+.analyze-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0.6rem 2rem;        /* was 0.85rem 2.5rem — slightly smaller */
+  border-radius: var(--radius-pill);
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--font-body);
+  letter-spacing: 0.02em;
+  color: #fff;
+
+  /* Orange-to-green gradient echoing the logo */
+  background: linear-gradient(135deg, #f97316 0%, #22c55e 100%);
+  background-size: 200% 200%;
+  background-position: 0% 50%;
+
+  box-shadow:
+    0 4px 24px rgba(249, 115, 22, 0.3),
+    0 1px 4px rgba(0, 0, 0, 0.2);
+
+  transition:
+    background-position 0.5s ease,
+    transform 0.2s ease,
+    box-shadow 0.3s ease;
+}
+
+.analyze-btn:hover:not(:disabled) {
+  background-position: 100% 50%;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow:
+    0 8px 36px rgba(249, 115, 22, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.analyze-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.analyze-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.analyze-btn__icon {
+  font-size: 1.1rem;
+}
+
+/* ── Loading spinner ── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.analyze-btn__spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.analyze-btn--loading {
+  background-position: 50% 50%;
+}
