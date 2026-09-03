@@ -6,22 +6,19 @@ import TaskSelector from './components/TaskSelector';
 import FileUploader from './components/FileUploader';
 import MarqueeSection from './components/MarqueeSection';
 
-/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║                  OmniSight — Home Page                   ║
- * ╚══════════════════════════════════════════════════════════╝
- */
+
 export default function App() {
   /* ── State ── */
   const [selectedTask, setSelectedTask] = useState(null);
   const [file, setFile] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   /* ── Task toggle handler ── */
-const handleToggleTask = useCallback((taskId) => {
-  setSelectedTask((prev) => (prev === taskId ? null : taskId));
-}, []);
+  const handleToggleTask = useCallback((taskId) => {
+    setSelectedTask((prev) => (prev === taskId ? null : taskId));
+  }, []);
 
   /* ── File change & Auto-Analyze handler ── */
   const handleFileChange = useCallback(async (newFile) => {
@@ -32,14 +29,24 @@ const handleToggleTask = useCallback((taskId) => {
       setIsAnalyzing(true);
 
       try {
-        console.log('[OmniSight] Sending to backend:', {
-          file: newFile.name,
-          tasks: selectedTask,
+        const formData = new FormData();
+        formData.append('file', newFile);
+        formData.append('task', selectedTask);
+
+        const response = await fetch('http://127.0.0.1:8000/upload', {
+          method: 'POST',
+          body: formData,
         });
 
-        await new Promise((r) => setTimeout(r, 1500));
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Server error: ${response.status}`);
+        }
 
-        alert(`✅ Submitted!\nFile: ${newFile.name}\nTasks: ${selectedTask.join(', ')}`);
+        const data = await response.json();
+        console.log('[OmniSight] Backend response:', data);
+        setSuccessMsg('File uploaded successfully')
+
       } catch (err) {
         setErrorMsg(`Analysis failed: ${err.message}`);
       } finally {
@@ -61,19 +68,20 @@ const handleToggleTask = useCallback((taskId) => {
           <HeroHeader />
 
           <TaskSelector
-  selectedTask={selectedTask}
-  onToggleTask={handleToggleTask}
-/>
+            selectedTask={selectedTask}
+            onToggleTask={handleToggleTask}
+          />
 
           <FileUploader
-  isVisible={Boolean(selectedTask)}
-  file={file}
-  onFileChange={handleFileChange}
-  isAnalyzing={isAnalyzing}
-/>
+            isVisible={Boolean(selectedTask)}
+            file={file}
+            onFileChange={handleFileChange}
+            isAnalyzing={isAnalyzing}
+          />
 
           {/* ── Error feedback ── */}
           {errorMsg && <div className="hero-section__error">{errorMsg}</div>}
+          {successMsg && <div className="hero-section__success">{successMsg}</div>}
         </div>
       </section>
 

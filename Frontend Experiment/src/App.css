@@ -14,13 +14,14 @@
 ════════════════════════════════════════ */
 .hero-section {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   flex: 0 0 62%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   padding-top: min(5vh, 48px);
+  padding-bottom: 5px;
 }
 
 /* ── Decorative Elliptical Blob ── */
@@ -49,6 +50,16 @@
 .hero-section__error {
   font-size: 0.875rem;
   color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: var(--sp-2, 0.5rem) var(--sp-6, 1.5rem);
+  border-radius: var(--radius-pill, 9999px);
+  text-align: center;
+}
+/* ── Success message ── */
+.hero-section__success {
+  font-size: 0.875rem;
+  color: #7af871;
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.2);
   padding: var(--sp-2, 0.5rem) var(--sp-6, 1.5rem);

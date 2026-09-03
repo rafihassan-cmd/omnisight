@@ -1,0 +1,60 @@
+# ==========================================
+# Operating System & IDEs
+# ==========================================
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# ==========================================
+# Environment Variables & Secrets
+# ==========================================
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# ==========================================
+# Python & FastAPI (Backend)
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Testing & Code Analysis
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Project-Specific Data & Session Cache
+temp_sessions/
+Backend/temp_sessions/
+*.parquet
+*.csv.tmp
+
+# ==========================================
+# React & Node.js (Frontend)
+# ==========================================
+node_modules/
+build/
+dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Caches & Local Locks
+.eslintcache
+.cache/
