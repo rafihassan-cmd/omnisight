@@ -1,0 +1,7 @@
+ID,Product,Price,Quantity,CustomerRating
+1,Widget A,15.99,100,4.5
+2,Widget B,24.50,,3.8
+3,Widget C,,150,4.9
+4,Widget D,12.00,50,
+5,Widget E,,,
+6,,19.99,200,4.1
