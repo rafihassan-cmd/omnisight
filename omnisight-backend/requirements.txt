@@ -1,0 +1,6 @@
+# Backend (core + API). The debug UI and tests have their own files.
+fastapi==0.141.1
+uvicorn==0.53.0
+python-multipart==0.0.32
+pandas>=3.0,<4
+numpy>=2.0
