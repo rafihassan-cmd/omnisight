@@ -29,6 +29,7 @@ class ColumnLabel(BaseModel):
 class ColumnProfile(ColumnLabel):
     position: int
     dtype: str
+    is_numeric: bool
     unique: int
     missing: int
     missing_pct: float

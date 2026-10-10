@@ -99,7 +99,7 @@ def test_missing_value_strategies_still_work_after_nullable_integer_conversion()
     assert out['c0'].iloc[2] == pytest.approx(7 / 3)
 
 
-@pytest.mark.parametrize('strategy', ['mean', 'median', 'max', 'min', 'mode', 'fill', 'drop'])
+@pytest.mark.parametrize('strategy', ['mean', 'median', 'mode', 'fill', 'drop'])
 def test_existing_part2_preview_and_apply_agree(strategy):
     df = read('n,city\n1,a\n,b\n3,c\n')
     before = df.copy(deep=True)

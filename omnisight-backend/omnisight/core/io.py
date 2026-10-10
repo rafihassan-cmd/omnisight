@@ -22,7 +22,14 @@ def load_csv(source) -> pd.DataFrame:
             if row and len(row) != len(headers):
                 raise CleaningError(f"Data row {row_number} has {len(row)} cells; expected {len(headers)}.")
         ids = [f"c{i}" for i in range(len(headers))]
-        df = pd.read_csv(io.StringIO(text), header=0, names=ids, low_memory=False)
+        df = pd.read_csv(
+            io.StringIO(text),
+            header=0,
+            names=ids,
+            low_memory=False,
+            keep_default_na=False,
+            na_values=[""],
+        )
         df.attrs["column_names"] = dict(zip(ids, headers))
         return df
     except (StopIteration, csv.Error, pd.errors.ParserError, pd.errors.EmptyDataError,

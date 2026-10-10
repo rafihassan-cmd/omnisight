@@ -21,11 +21,33 @@ def duplicate_groups(df: pd.DataFrame) -> list[dict]:
 def column_profile(df: pd.DataFrame) -> list[dict]:
     n = len(df)
     names = column_names(df)
-    return [{"id": cid, "name": names[cid], "position": i, "dtype": str(df[cid].dtype),
-             "unique": int(df[cid].nunique()), "missing": int(df[cid].isna().sum()),
-             "missing_pct": round(100 * int(df[cid].isna().sum()) / n, 2) if n else 0.0}
-            for i, cid in enumerate(df.columns)]
+    profiles = []
 
+    for position, cid in enumerate(df.columns):
+        series = df[cid]
+        missing = int(series.isna().sum())
+
+        is_numeric = (
+            pd.api.types.is_numeric_dtype(series.dtype)
+            and not pd.api.types.is_bool_dtype(series.dtype)
+        )
+
+        profiles.append(
+            {
+                "id": cid,
+                "name": names[cid],
+                "position": position,
+                "dtype": str(series.dtype),
+                "is_numeric": is_numeric,
+                "unique": int(series.nunique()),
+                "missing": missing,
+                "missing_pct": (
+                    round(100 * missing / n, 2) if n else 0.0
+                ),
+            }
+        )
+
+    return profiles
 
 def shape_stats(df: pd.DataFrame) -> dict:
     return {"rows": len(df), "columns": df.shape[1], "missing_cells": int(df.isna().sum().sum())}

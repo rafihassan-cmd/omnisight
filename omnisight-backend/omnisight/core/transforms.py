@@ -34,31 +34,97 @@ def discard_column(df: pd.DataFrame, column_id: str) -> pd.DataFrame:
     return out
 
 
-def remove_affix(df: pd.DataFrame, column_id: str, mode: str, text: str,
-                 convert_to_numeric: bool = False) -> pd.DataFrame:
+def remove_affix(
+    df: pd.DataFrame,
+    column_id: str,
+    mode: str,
+    text: str,
+    convert_to_numeric: bool = False,
+    remove_commas: bool = False,
+) -> pd.DataFrame:
     require_columns(df, [column_id])
+
     if not isinstance(mode, str) or mode not in ("prefix", "suffix"):
         raise CleaningError("Mode must be prefix or suffix.")
-    if not isinstance(text, str) or not text:
-        raise CleaningError("Provide nonempty text to remove.")
-    if not isinstance(convert_to_numeric, bool):
-        raise CleaningError("convert_to_numeric must be true or false.")
-    strip = str.removeprefix if mode == "prefix" else str.removesuffix
-    original = df[column_id]
-    cleaned = original.map(lambda value: strip(value, text) if isinstance(value, str) else value)
+
+    if not isinstance(text, str):
+        raise CleaningError("Prefix/suffix text must be a string.")
+
+    if any(
+        not isinstance(flag, bool)
+        for flag in (convert_to_numeric, remove_commas)
+    ):
+        raise CleaningError("Conversion and comma options must be true or false.")
+
+    if not text and not remove_commas:
+        raise CleaningError(
+            "Provide a prefix/suffix or enable comma removal."
+        )
+
+    def transform(value):
+        # Preserve existing nulls and non-text values.
+        if not isinstance(value, str):
+            return value
+
+        if text:
+            if mode == "prefix":
+                value = value.removeprefix(text)
+            else:
+                value = value.removesuffix(text)
+
+        if remove_commas:
+            value = value.replace(",", "")
+
+        return value
+
+    cleaned = df[column_id].map(transform)
+
     if convert_to_numeric:
         cleaned = numeric_series(cleaned)
+
+    # Commit only after all validation succeeds.
     out = df.copy(deep=False)
     out[column_id] = cleaned
+
     return out
 
 
-def preview_affix(df: pd.DataFrame, column_id: str, mode: str, text: str,
-                  convert_to_numeric: bool = False) -> dict:
-    out = remove_affix(df, column_id, mode, text, convert_to_numeric)
-    before, after = df[column_id], out[column_id]
-    changed = ~(before.eq(after).fillna(False) | (before.isna() & after.isna()))
-    sample = pd.DataFrame({"row": range(1, len(df) + 1), "before": before.to_numpy(),
-                           "after": after.to_numpy()}).head(20)
-    return {"valid": True, "changed_cells": int(changed.sum()),
-            "dtype_after": str(after.dtype), "sample": frame_to_records(sample)}
+def preview_affix(
+    df: pd.DataFrame,
+    column_id: str,
+    mode: str,
+    text: str,
+    convert_to_numeric: bool = False,
+    remove_commas: bool = False,
+) -> dict:
+    out = remove_affix(
+        df,
+        column_id=column_id,
+        mode=mode,
+        text=text,
+        convert_to_numeric=convert_to_numeric,
+        remove_commas=remove_commas,
+    )
+
+    before = df[column_id]
+    after = out[column_id]
+
+    changed = ~(
+        before.eq(after).fillna(False)
+        | (before.isna() & after.isna())
+    )
+
+    sample = pd.DataFrame(
+        {
+            "row": range(1, len(df) + 1),
+            "before": before.to_numpy(),
+            "after": after.to_numpy(),
+        }
+    ).head(20)
+
+    return {
+        "valid": True,
+        "changed_cells": int(changed.sum()),
+        "dtype_after": str(after.dtype),
+        "sample": frame_to_records(sample),
+    }

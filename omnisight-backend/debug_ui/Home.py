@@ -66,26 +66,103 @@ with controls:
                         else:
                             common.run_operation(dataset_id, "discard_column", {"column_id": cid})
     with affix:
-        st.caption("Remove an exact prefix or suffix once. Existing null values are preserved.")
+        st.caption(
+            "Remove an exact prefix/suffix and optionally remove "
+            "commas from the selected column."
+        )
+
         with st.form(f"affix_{version}"):
-            cid = st.selectbox("Column to transform", list(labels), format_func=labels.get)
-            mode = st.radio("Position", ["prefix", "suffix"], horizontal=True)
-            text = st.text_input("Exact text to remove", placeholder="$ or kg")
-            numeric = st.checkbox("Convert this column to numeric after removal")
-            st.caption("Conversion rejects invalid values, commas, new empty strings and infinities.")
+            cid = st.selectbox(
+                "Column to transform",
+                list(labels),
+                format_func=labels.get,
+            )
+
+            mode = st.radio(
+                "Position",
+                ["prefix", "suffix"],
+                horizontal=True,
+            )
+
+            text = st.text_input(
+                "Exact text to remove",
+                placeholder="$ or kg",
+            )
+
+            st.caption(
+                "Leave the text empty if you only want to remove commas."
+            )
+
+            remove_commas = st.checkbox(
+                "Remove commas",
+                help=(
+                    "Treat commas as digit-grouping separators: "
+                    "1,250 becomes 1250 and 1,00,000 becomes 100000."
+                ),
+            )
+
+            st.caption(
+                "Use comma removal for digit grouping. "
+                "A decimal-comma value such as 1,25 would become 125."
+            )
+
+            numeric = st.checkbox(
+                "Convert this column to numeric after cleaning"
+            )
+
+            st.caption(
+                "Numeric conversion rejects invalid values, newly "
+                "produced empty strings and infinities."
+            )
+
             validate_col, apply_col = st.columns(2)
-            validate = validate_col.form_submit_button("Validate / preview")
-            apply = apply_col.form_submit_button("Apply transformation", type="primary")
-        params = {"column_id": cid, "mode": mode, "text": text, "convert_to_numeric": numeric}
+
+            validate = validate_col.form_submit_button(
+                "Validate / preview"
+            )
+
+            apply = apply_col.form_submit_button(
+                "Apply transformation",
+                type="primary",
+            )
+
+        params = {
+            "column_id": cid,
+            "mode": mode,
+            "text": text,
+            "remove_commas": remove_commas,
+            "convert_to_numeric": numeric,
+        }
+
         if validate:
             try:
-                result = client.preview_operation(dataset_id, "remove_affix", params, version)
-                st.success(f"Valid · {result['changed_cells']} changed cells · {result['dtype_after']}")
-                st.dataframe(pd.DataFrame(result["sample"]), hide_index=True, width="stretch")
+                result = client.preview_operation(
+                    dataset_id,
+                    "remove_affix",
+                    params,
+                    version,
+                )
+
+                st.success(
+                    f"Valid · {result['changed_cells']} changed cells · "
+                    f"{result['dtype_after']}"
+                )
+
+                st.dataframe(
+                    pd.DataFrame(result["sample"]),
+                    hide_index=True,
+                    width="stretch",
+                )
+
             except client.ApiError as exc:
                 common.report_error(exc)
+
         if apply:
-            common.run_operation(dataset_id, "remove_affix", params)
+            common.run_operation(
+                dataset_id,
+                "remove_affix",
+                params,
+            )
     st.divider()
     if info["can_proceed"]:
         st.page_link("pages/1_Missing_Values.py", label="Next: Part 2 — missing values →")
