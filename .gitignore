@@ -6,3 +6,5 @@ __pycache__/
 .sites-runtime/
 *.db
 buffer/
+.vercel/
+.env*

@@ -6,6 +6,7 @@ import {Hexagon,Activity,LayoutDashboard,Workflow,Boxes,Radio,ArrowUpRight,Chevr
 import {readDataset,analyzeRows,makeSample,taskNames,peekDataset} from './analysis';
 import QuestionnaireModal from './QuestionnaireModal';
 import ActionPages from './ActionPages';
+import AnalysisWizard from './AnalysisWizard';
 import './style.css';
 
 const Plot=lazy(async()=>{const [{default:factory},{default:Plotly}]=await Promise.all([import('react-plotly.js/factory'),import('plotly.js-dist-min')]);return{default:factory(Plotly)};});
@@ -86,6 +87,10 @@ function Modal({title,onClose,children}){const ref=useRef(null);useEffect(()=>{c
 function App(){
  const reduced=useReduced(),[selected,setSelected]=useState(null),[view,setView]=useState('Workbench'),[file,setFile]=useState(null),[result,setResult]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[modal,setModal]=useState(null),[drag,setDrag]=useState(false),[logs,setLogs]=useState([{time:new Date().toLocaleTimeString(),text:'Workspace initialized. Sample visualization ready.'}]),[stageMode,setStageMode]=useState(0),[expanded,setExpanded]=useState(false),[pointSize,setPointSize]=useState(2),[grid,setGrid]=useState(true),[chartKey,setChartKey]=useState(0),[sampleResult,setSampleResult]=useState(false),[isLight,setIsLight]=useState(true),[cleanConfig,setCleanConfig]=useState(null);
 
+ // Workbench presentation mode: 'wizard' (simple 4-step flow) or 'classic' (spatial 3D telemetry)
+ const [workbenchMode, setWorkbenchMode] = useState('wizard');
+ const [activePresetKey, setActivePresetKey] = useState('revenue');
+
  // Questionnaire and Action Pages State
  const [activeDatasetRows, setActiveDatasetRows] = useState(DEFAULT_DATASETS.revenue.rows);
  const [activeDatasetName, setActiveDatasetName] = useState(DEFAULT_DATASETS.revenue.name);
@@ -108,6 +113,7 @@ function App(){
 
  const loadPresetData = (presetKey) => {
    const p = DEFAULT_DATASETS[presetKey] || DEFAULT_DATASETS.revenue;
+   setActivePresetKey(presetKey);
    setActiveDatasetRows(p.rows);
    setActiveDatasetName(p.name);
    setQuestionConfig({
@@ -245,130 +251,167 @@ function App(){
           isLight={isLight}
         />
       ) : view === 'Workbench' ? (
-        <>
-          <section className="execution">
-            <div className="execution-toolbar">
-              <span className="workspace-pill"><Terminal size={13}/> workspace://prod-cluster-04 <ChevronDown size={12}/></span>
-              <div className="actions">
-                <button
-                  className="execute-button"
-                  style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#030507', fontWeight: 700 }}
-                  onClick={() => setModal('questionnaire')}
-                >
-                  <Sparkles size={14}/> Questionnaire &amp; Action Pages <span>↵</span>
-                </button>
-                <button className="outline-button" onClick={()=>setModal('logs')}><Terminal size={14}/>Logs</button>
-                <button className="execute-button" onClick={()=>execute()} disabled={busy}>
-                  {busy?<LoaderCircle className="spin" size={15}/>:<Play size={14} fill="currentColor"/>}
-                  {busy?'Analyzing':'Execute'}
-                  <span>↵</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Hero Section */}
-            <div className="hero">
-              <div>
-                <p className="eyebrow">NEXT-GEN NEURAL DATA ANALYSIS & TELEMETRY SUITE</p>
-                <h1>How should we analyze<span>?</span></h1>
-              </div>
-              <span className="hero-aside"><span className="mini-line"/> FROM RAW DATA TO CLARITY</span>
-            </div>
-
-            {/* Quick Questionnaire & Action Pages Banner */}
-            <div className="qmodal-preset-bar" style={{ margin: '0 0 16px 0', borderColor: 'rgba(0,230,118,0.25)', background: 'rgba(0,230,118,0.06)' }}>
-              <span className="mono" style={{ color: '#00e676' }}>
-                <Sparkles size={12} style={{ display: 'inline', marginRight: 4 }}/>
-                INTAKE ROUTER: 5 Questions (Topic, Goal, Target, Date, ANOVA Group) &rarr; Dedicated Action Page
-              </span>
-              <div className="qmodal-preset-actions">
-                <button
-                  type="button"
-                  className="qmodal-preset-btn"
-                  style={{ padding: '4px 10px', fontWeight: 700 }}
-                  onClick={() => setModal('questionnaire')}
-                >
-                  Configure Questions &rarr;
-                </button>
-                <button
-                  type="button"
-                  className="qmodal-preset-btn"
-                  onClick={() => {
-                    setView('Action: trends');
-                    setActiveActionGoal('trends');
-                  }}
-                >
-                  Direct Demo: Trends
-                </button>
-                <button
-                  type="button"
-                  className="qmodal-preset-btn"
-                  onClick={() => {
-                    setView('Action: compare_groups');
-                    setActiveActionGoal('compare_groups');
-                  }}
-                >
-                  Direct Demo: Groups (ANOVA)
-                </button>
-              </div>
-            </div>
-
-            <TaskRail selected={selected} onSelect={setSelected} reduced={reduced}/>
-
-            <div
-              aria-hidden={selected===null}
-              className={'upload-dock '+(selected!==null?'revealed':'')+(drag?' dragover':'')}
-              onDragOver={e=>{e.preventDefault();setDrag(true);}}
-              onDragLeave={()=>setDrag(false)}
-              onDrop={e=>{e.preventDefault();setDrag(false);accept(e.dataTransfer.files[0]);}}
-            >
-              <button className="upload-target" tabIndex={selected===null?-1:0} onClick={()=>input.current?.click()}>
-                <Upload size={16}/>
-                <span>
-                  {file?<><strong>{file.name}</strong><span className="upload-formats"> · {fmt(file.size/1024)} KB</span></>:<><strong>Drop your dataset here</strong><span className="upload-formats"> or browse files</span></>}
+        workbenchMode === 'wizard' ? (
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 32px 0 32px', flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="mono" style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                  <Sparkles size={12} style={{ display: 'inline', marginRight: 4 }}/>
+                  GUIDED ANALYSIS WORKBENCH
                 </span>
-                <span className="formats">CSV · JSON · XLSX · PARQUET</span>
-              </button>
-              <span className="dock-divider"/>
-              <button className="sample-button" tabIndex={selected===null?-1:0} onClick={()=>execute(true)} disabled={busy}>
-                Try sample <ArrowRight size={13}/>
-              </button>
-            </div>
-
-            <input ref={input} type="file" hidden accept=".csv,.json,.xlsx,.parquet" onChange={e=>accept(e.target.files[0])}/>
-            {error&&<div role="alert" className="error-message">{error}<button aria-label="Dismiss error" onClick={()=>setError('')}><X size={13}/></button></div>}
-          </section>
-
-          <section className={'telemetry '+(expanded?'expanded':'')}>
-            <div className="telemetry-head">
-              <div>
-                <div className="live-label"><span className={reduced?'live-dot still':'live-dot'}/>LIVE TELEMETRY FEED<span className="sample-badge">{result&&!sampleResult?'DATASET ANALYSIS':'SAMPLE DATA'}</span></div>
-                <h2>{stageMode===1?'Statistical profile':stageMode===2?'Intelligence brief':result?'Dataset visualization':'3D Holographic Spatial Mapping'}</h2>
+                <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>· Clean data &rarr; Questions &rarr; Goal &rarr; Results &rarr; Graph</span>
               </div>
-              <div className="chart-actions">
-                <span className="chart-type">{stageMode===0?'SPATIAL VIEW':stageMode===1?'STATISTICS':'SUMMARY'}</span>
-                <button className="icon-button" title="Visualization settings" aria-label="Visualization settings" onClick={()=>setModal('settings')}><SlidersHorizontal size={16}/></button>
-                <button className="icon-button" title="Reset view" aria-label="Reset chart view" onClick={()=>setChartKey(k=>k+1)}><RotateCcw size={15}/></button>
-                <button className="icon-button" title={expanded?'Exit expanded view':'Expand visualization'} aria-label={expanded?'Exit expanded view':'Expand visualization'} onClick={()=>setExpanded(!expanded)}>{expanded?<X size={17}/>:<Expand size={16}/>}</button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="outline-button"
+                  style={{ fontSize: '11px', padding: '4px 10px' }}
+                  onClick={() => setWorkbenchMode('classic')}
+                  title="Switch to 3D spatial studio"
+                >
+                  Switch to Spatial Studio
+                </button>
               </div>
             </div>
 
-            <div className="stage">
-              <div className="stage-coordinate">{stageMode===0?'X / Y / Z COORDINATE SPACE':'ANALYSIS OUTPUT'}<span>{result?(sampleResult?'Sample dataset':file?.name):'synthetic_spatial_sample'}</span></div>
-              {busy?<div className="empty-state"><LoaderCircle size={30} className="spin"/><h3>Analyzing your dataset</h3><p>Cleaning, profiling, and mapping the results.</p></div>:stageMode===0?<Suspense fallback={<div className="empty-state"><LoaderCircle className="spin" size={25}/><p>Initializing spatial renderer…</p></div>}><Plot key={chartKey} data={c.data} layout={chartLayout} config={{displayModeBar:false,responsive:true,scrollZoom:false,displaylogo:false}} style={{width:'100%',height:'100%'}} useResizeHandler/></Suspense>:!result?<div className="empty-state"><Database size={27}/><h3>Your data, a clearer perspective.</h3><p>Select a task and upload a dataset to see {stageMode===1?'its statistical profile':'an intelligence brief'}.</p><button className="outline-button" onClick={()=>{setSelected(stageMode===1?3:4);}}>Choose {stageMode===1?'Check Statistics':'Intelligence Brief'} <ArrowRight size={14}/></button></div>:stageMode===1?<div className="statistics"><table><thead><tr><th>FIELD</th><th>TYPE</th><th>MEAN</th><th>STD DEV</th><th>MIN</th><th>MAX</th><th>MISSING</th></tr></thead><tbody>{result.stats.profiles.map(p=><tr key={p.name}><td>{p.name}</td><td>{p.type}</td><td>{fmt(p.mean)}</td><td>{fmt(p.std)}</td><td>{fmt(p.min)}</td><td>{fmt(p.max)}</td><td>{p.missing}</td></tr>)}</tbody></table></div>:<article className="brief"><span className="brief-label"><Sparkles size={16}/>{result.summary_source==='gemini'?'GEMINI INTELLIGENCE':'AUTOMATED STATISTICAL BRIEF'}</span><p>{result.ai_summary}</p>{result.summary_source!=='gemini'&&<small>Generated from measured statistics. Connect the Gemini backend for an AI narrative.</small>}<button className="outline-button" onClick={download}><Download size={14}/>Export results</button></article>}
-              <div className="axis-key"><i/>X AXIS <i/>Y AXIS <i/>Z AXIS</div>
-              <div className="stage-watermark"><Hexagon size={16}/>OMNISIGHT ENGINE</div>
-            </div>
+            <AnalysisWizard
+              Plot={Plot}
+              initialRows={activeDatasetRows}
+              datasetName={activeDatasetName}
+              onUploadNewFile={() => input.current?.click()}
+              onLoadPreset={loadPresetData}
+              activePresetKey={activePresetKey}
+              isLight={isLight}
+            />
 
-            <div className="telemetry-footer">
-              <div className="metric"><span>DATA POINTS</span><strong>{fmt(result?.stats.cleaned_rows??sample.length)}<small>records</small></strong></div>
-              <div className="metric"><span>{result?'FLAGGED VALUES':'DIMENSIONS'}</span><strong>{result?fmt(result.anomalies.length):'03'}<small>{result?'outliers':'axes'}</small></strong></div>
-              <div className="metric optional"><span>{result?'MISSING VALUES':'DATA SOURCE'}</span><strong>{result?fmt(result.stats.missing):'Synthetic'}<small>{result?'filled':'sample'}</small></strong></div>
-              <div className="stage-pagination">{['Spatial view','Statistics','Intelligence brief'].map((v,i)=><button key={v} className={stageMode===i?'active':''} aria-label={v} title={v} onClick={()=>setStageMode(i)}/>)}</div>
-              <span className="interaction-hint">{stageMode===0?'DRAG TO ROTATE · PINCH TO ZOOM':'EXPLORE YOUR RESULTS'}</span>
-            </div>
-          </section>
-        </>
+            <input ref={input} type="file" hidden accept=".csv,.json,.xlsx,.parquet" onChange={e => accept(e.target.files[0])} />
+          </div>
+        ) : (
+          <>
+            <section className="execution">
+              <div className="execution-toolbar">
+                <span className="workspace-pill"><Terminal size={13}/> workspace://prod-cluster-04 <ChevronDown size={12}/></span>
+                <div className="actions">
+                  <button
+                    className="execute-button"
+                    style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)', color: '#030507', fontWeight: 700 }}
+                    onClick={() => setWorkbenchMode('wizard')}
+                  >
+                    <Sparkles size={14}/> Back to Simple Guided Flow
+                  </button>
+                  <button className="outline-button" onClick={()=>setModal('logs')}><Terminal size={14}/>Logs</button>
+                  <button className="execute-button" onClick={()=>execute()} disabled={busy}>
+                    {busy?<LoaderCircle className="spin" size={15}/>:<Play size={14} fill="currentColor"/>}
+                    {busy?'Analyzing':'Execute'}
+                    <span>↵</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Hero Section */}
+              <div className="hero">
+                <div>
+                  <p className="eyebrow">NEXT-GEN NEURAL DATA ANALYSIS & TELEMETRY SUITE</p>
+                  <h1>How should we analyze<span>?</span></h1>
+                </div>
+                <span className="hero-aside"><span className="mini-line"/> FROM RAW DATA TO CLARITY</span>
+              </div>
+
+              {/* Quick Questionnaire & Action Pages Banner */}
+              <div className="qmodal-preset-bar" style={{ margin: '0 0 16px 0', borderColor: 'rgba(0,230,118,0.25)', background: 'rgba(0,230,118,0.06)' }}>
+                <span className="mono" style={{ color: '#00e676' }}>
+                  <Sparkles size={12} style={{ display: 'inline', marginRight: 4 }}/>
+                  INTAKE ROUTER: 5 Questions (Topic, Goal, Target, Date, ANOVA Group) &rarr; Dedicated Action Page
+                </span>
+                <div className="qmodal-preset-actions">
+                  <button
+                    type="button"
+                    className="qmodal-preset-btn"
+                    style={{ padding: '4px 10px', fontWeight: 700 }}
+                    onClick={() => setModal('questionnaire')}
+                  >
+                    Configure Questions &rarr;
+                  </button>
+                  <button
+                    type="button"
+                    className="qmodal-preset-btn"
+                    onClick={() => {
+                      setView('Action: trends');
+                      setActiveActionGoal('trends');
+                    }}
+                  >
+                    Direct Demo: Trends
+                  </button>
+                  <button
+                    type="button"
+                    className="qmodal-preset-btn"
+                    onClick={() => {
+                      setView('Action: compare_groups');
+                      setActiveActionGoal('compare_groups');
+                    }}
+                  >
+                    Direct Demo: Groups (ANOVA)
+                  </button>
+                </div>
+              </div>
+
+              <TaskRail selected={selected} onSelect={setSelected} reduced={reduced}/>
+
+              <div
+                aria-hidden={selected===null}
+                className={'upload-dock '+(selected!==null?'revealed':'')+(drag?' dragover':'')}
+                onDragOver={e=>{e.preventDefault();setDrag(true);}}
+                onDragLeave={()=>setDrag(false)}
+                onDrop={e=>{e.preventDefault();setDrag(false);accept(e.dataTransfer.files[0]);}}
+              >
+                <button className="upload-target" tabIndex={selected===null?-1:0} onClick={()=>input.current?.click()}>
+                  <Upload size={16}/>
+                  <span>
+                    {file?<><strong>{file.name}</strong><span className="upload-formats"> · {fmt(file.size/1024)} KB</span></>:<><strong>Drop your dataset here</strong><span className="upload-formats"> or browse files</span></>}
+                  </span>
+                  <span className="formats">CSV · JSON · XLSX · PARQUET</span>
+                </button>
+                <span className="dock-divider"/>
+                <button className="sample-button" tabIndex={selected===null?-1:0} onClick={()=>execute(true)} disabled={busy}>
+                  Try sample <ArrowRight size={13}/>
+                </button>
+              </div>
+
+              <input ref={input} type="file" hidden accept=".csv,.json,.xlsx,.parquet" onChange={e=>accept(e.target.files[0])}/>
+              {error&&<div role="alert" className="error-message">{error}<button aria-label="Dismiss error" onClick={()=>setError('')}><X size={13}/></button></div>}
+            </section>
+
+            <section className={'telemetry '+(expanded?'expanded':'')}>
+              <div className="telemetry-head">
+                <div>
+                  <div className="live-label"><span className={reduced?'live-dot still':'live-dot'}/>LIVE TELEMETRY FEED<span className="sample-badge">{result&&!sampleResult?'DATASET ANALYSIS':'SAMPLE DATA'}</span></div>
+                  <h2>{stageMode===1?'Statistical profile':stageMode===2?'Intelligence brief':result?'Dataset visualization':'3D Holographic Spatial Mapping'}</h2>
+                </div>
+                <div className="chart-actions">
+                  <span className="chart-type">{stageMode===0?'SPATIAL VIEW':stageMode===1?'STATISTICS':'SUMMARY'}</span>
+                  <button className="icon-button" title="Visualization settings" aria-label="Visualization settings" onClick={()=>setModal('settings')}><SlidersHorizontal size={16}/></button>
+                  <button className="icon-button" title="Reset view" aria-label="Reset chart view" onClick={()=>setChartKey(k=>k+1)}><RotateCcw size={15}/></button>
+                  <button className="icon-button" title={expanded?'Exit expanded view':'Expand visualization'} aria-label={expanded?'Exit expanded view':'Expand visualization'} onClick={()=>setExpanded(!expanded)}>{expanded?<X size={17}/>:<Expand size={16}/>}</button>
+                </div>
+              </div>
+
+              <div className="stage">
+                <div className="stage-coordinate">{stageMode===0?'X / Y / Z COORDINATE SPACE':'ANALYSIS OUTPUT'}<span>{result?(sampleResult?'Sample dataset':file?.name):'synthetic_spatial_sample'}</span></div>
+                {busy?<div className="empty-state"><LoaderCircle size={30} className="spin"/><h3>Analyzing your dataset</h3><p>Cleaning, profiling, and mapping the results.</p></div>:stageMode===0?<Suspense fallback={<div className="empty-state"><LoaderCircle className="spin" size={25}/><p>Initializing spatial renderer…</p></div>}><Plot key={chartKey} data={c.data} layout={chartLayout} config={{displayModeBar:false,responsive:true,scrollZoom:false,displaylogo:false}} style={{width:'100%',height:'100%'}} useResizeHandler/></Suspense>:!result?<div className="empty-state"><Database size={27}/><h3>Your data, a clearer perspective.</h3><p>Select a task and upload a dataset to see {stageMode===1?'its statistical profile':'an intelligence brief'}.</p><button className="outline-button" onClick={()=>{setSelected(stageMode===1?3:4);}}>Choose {stageMode===1?'Check Statistics':'Intelligence Brief'} <ArrowRight size={14}/></button></div>:stageMode===1?<div className="statistics"><table><thead><tr><th>FIELD</th><th>TYPE</th><th>MEAN</th><th>STD DEV</th><th>MIN</th><th>MAX</th><th>MISSING</th></tr></thead><tbody>{result.stats.profiles.map(p=><tr key={p.name}><td>{p.name}</td><td>{p.type}</td><td>{fmt(p.mean)}</td><td>{fmt(p.std)}</td><td>{fmt(p.min)}</td><td>{fmt(p.max)}</td><td>{p.missing}</td></tr>)}</tbody></table></div>:<article className="brief"><span className="brief-label"><Sparkles size={16}/>{result.summary_source==='gemini'?'GEMINI INTELLIGENCE':'AUTOMATED STATISTICAL BRIEF'}</span><p>{result.ai_summary}</p>{result.summary_source!=='gemini'&&<small>Generated from measured statistics. Connect the Gemini backend for an AI narrative.</small>}<button className="outline-button" onClick={download}><Download size={14}/>Export results</button></article>}
+                <div className="axis-key"><i/>X AXIS <i/>Y AXIS <i/>Z AXIS</div>
+                <div className="stage-watermark"><Hexagon size={16}/>OMNISIGHT ENGINE</div>
+              </div>
+
+              <div className="telemetry-footer">
+                <div className="metric"><span>DATA POINTS</span><strong>{fmt(result?.stats.cleaned_rows??sample.length)}<small>records</small></strong></div>
+                <div className="metric"><span>{result?'FLAGGED VALUES':'DIMENSIONS'}</span><strong>{result?fmt(result.anomalies.length):'03'}<small>{result?'outliers':'axes'}</small></strong></div>
+                <div className="metric optional"><span>{result?'MISSING VALUES':'DATA SOURCE'}</span><strong>{result?fmt(result.stats.missing):'Synthetic'}<small>{result?'filled':'sample'}</small></strong></div>
+                <div className="stage-pagination">{['Spatial view','Statistics','Intelligence brief'].map((v,i)=><button key={v} className={stageMode===i?'active':''} aria-label={v} title={v} onClick={()=>setStageMode(i)}/>)}</div>
+                <span className="interaction-hint">{stageMode===0?'DRAG TO ROTATE · PINCH TO ZOOM':'EXPLORE YOUR RESULTS'}</span>
+              </div>
+            </section>
+          </>
+        )
       ) : (
         <section className="secondary-page">
           <span className="eyebrow">OMNISIGHT / {view.toUpperCase()}</span>
