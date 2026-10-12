@@ -15,9 +15,11 @@ import {
   Info,
   Layers,
   Upload,
-  Database
+  Database,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { GOAL_MAP } from './QuestionnaireModal';
+import { peekDataset } from './analysis';
 
 export default function AnalysisWizard({
   Plot,
@@ -41,9 +43,29 @@ export default function AnalysisWizard({
     missingFilled: 0,
   });
 
+  // Column customization & cleaning configuration
+  const [cleanPeek, setCleanPeek] = useState(() => peekDataset(initialRows || []));
+  const [cleanConfig, setCleanConfig] = useState(() => {
+    const peek = peekDataset(initialRows || []);
+    return {
+      selectedColumns: peek.fields.slice(),
+      renameMap: {},
+      missingStrategies: {},
+    };
+  });
+  const [showAdvancedCleaning, setShowAdvancedCleaning] = useState(true);
+  const [hasAppliedChanges, setHasAppliedChanges] = useState(false);
+
   // Sync rows if initialRows changes from parent
   React.useEffect(() => {
     if (initialRows && initialRows.length > 0) {
+      const peek = peekDataset(initialRows);
+      setCleanPeek(peek);
+      setCleanConfig({
+        selectedColumns: peek.fields.slice(),
+        renameMap: {},
+        missingStrategies: {},
+      });
       setCleanedRows(initialRows);
       setCleaningStats({
         originalCount: initialRows.length,
@@ -51,6 +73,8 @@ export default function AnalysisWizard({
         duplicatesRemoved: 0,
         missingFilled: 0,
       });
+      setHasAppliedChanges(false);
+      setStep(1);
     }
   }, [initialRows]);
 
@@ -102,28 +126,83 @@ export default function AnalysisWizard({
   const [aiSummaryRequested, setAiSummaryRequested] = useState(false);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
-  // Auto clean simulation
-  const handleAutoClean = () => {
+  // Comprehensive cleaning, renaming, and missing value processing
+  const applyCustomCleaning = () => {
+    const { selectedColumns, renameMap, missingStrategies } = cleanConfig;
+    const baseSource = (initialRows && initialRows.length > 0) ? initialRows : cleanedRows;
+    let rows = [...baseSource];
+
+    // 1. Calculate values for mean, min, max strategies
+    const evaluatedStrategies = { ...missingStrategies };
+    for (const [col, strat] of Object.entries(evaluatedStrategies)) {
+      if (['mean', 'min', 'max'].includes(strat.type)) {
+        const nums = rows.map((r) => Number(r[col])).filter((n) => !isNaN(n));
+        if (nums.length > 0) {
+          if (strat.type === 'mean') strat.calculatedValue = Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 100) / 100;
+          if (strat.type === 'min') strat.calculatedValue = Math.min(...nums);
+          if (strat.type === 'max') strat.calculatedValue = Math.max(...nums);
+        } else strat.calculatedValue = 0;
+      }
+    }
+
+    // 2. Drop rows if strategy is drop
+    const dropCols = Object.keys(evaluatedStrategies).filter((c) => evaluatedStrategies[c]?.type === 'drop');
+    if (dropCols.length > 0) {
+      rows = rows.filter((r) => !dropCols.some((c) => r[c] === null || r[c] === undefined || r[c] === ''));
+    }
+
+    // 3. Keep selected columns, apply fill strategies and rename
+    let filledCount = 0;
+    const targetCols = selectedColumns.length > 0 ? selectedColumns : cleanPeek.fields;
+    rows = rows.map((r) => {
+      const newRow = {};
+      targetCols.forEach((c) => {
+        let v = r[c];
+        if (v === null || v === undefined || v === '') {
+          const strat = evaluatedStrategies[c];
+          if (strat) {
+            filledCount++;
+            if (strat.type === 'fill') v = strat.value;
+            else if (['mean', 'min', 'max'].includes(strat.type)) v = strat.calculatedValue;
+          }
+        }
+        const targetName = (renameMap[c] && renameMap[c].trim()) || c;
+        newRow[targetName] = v;
+      });
+      return newRow;
+    });
+
+    // 4. Deduplicate
     const unique = [];
     const seen = new Set();
     let dups = 0;
-    cleanedRows.forEach((r) => {
+    rows.forEach((r) => {
       const key = JSON.stringify(r);
       if (seen.has(key)) dups++;
       else {
         seen.add(key);
-        unique.push({ ...r });
+        unique.push(r);
       }
     });
 
     setCleanedRows(unique);
     setIsCleaned(true);
     setCleaningStats({
-      originalCount: cleanedRows.length,
+      originalCount: baseSource.length,
       cleanedCount: unique.length,
       duplicatesRemoved: dups,
-      missingFilled: 0,
+      missingFilled: filledCount,
     });
+    if (renameMap[targetCol] && renameMap[targetCol].trim()) {
+      setTargetCol(renameMap[targetCol].trim());
+    }
+    if (dateCol && renameMap[dateCol] && renameMap[dateCol].trim()) {
+      setDateCol(renameMap[dateCol].trim());
+    }
+    if (groupCol && renameMap[groupCol] && renameMap[groupCol].trim()) {
+      setGroupCol(renameMap[groupCol].trim());
+    }
+    setHasAppliedChanges(true);
   };
 
   // Helper for Plotly layout
@@ -409,9 +488,151 @@ export default function AnalysisWizard({
                 </button>
               </>
             )}
-            <button type="button" className="outline-button" onClick={handleAutoClean} title="Re-scan and standardize">
+            <button type="button" className="outline-button" onClick={applyCustomCleaning} title="Re-scan and standardize">
               <RotateCcw size={13} /> Re-run Cleaning
             </button>
+          </div>
+
+          {/* Column Names & Cleaning Options (Renaming & Missing Values Dropdown) */}
+          <div className="wizard-column-options-card">
+            <div className="wizard-column-options-header">
+              <div>
+                <strong style={{ fontSize: '14px', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <SlidersHorizontal size={15} style={{ color: 'var(--accent-primary)' }} />
+                  Column Customization &amp; Cleaning Options
+                </strong>
+                <p style={{ margin: '3px 0 0 0', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  Rename any column manually, exclude columns, or set missing value strategies (mean, drop, custom value).
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="outline-button"
+                  style={{ fontSize: '11px', padding: '4px 10px' }}
+                  onClick={() => setShowAdvancedCleaning(!showAdvancedCleaning)}
+                >
+                  {showAdvancedCleaning ? 'Hide Column Options' : 'Show Column Options'}
+                </button>
+              </div>
+            </div>
+
+            {showAdvancedCleaning && (
+              <div className="clean-grid" style={{ marginTop: '14px' }}>
+                {cleanPeek.fields.map((f) => {
+                  const isSelected = cleanConfig.selectedColumns.includes(f);
+                  const isMissing = cleanPeek.missing[f] > 0;
+                  const strat = cleanConfig.missingStrategies[f] || { type: '', value: '' };
+                  const colType = cleanPeek.types[f];
+
+                  return (
+                    <div key={f} className="clean-row" style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {/* Select Checkbox & Original Name */}
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: '170px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const s = new Set(cleanConfig.selectedColumns);
+                            if (e.target.checked) s.add(f);
+                            else s.delete(f);
+                            setCleanConfig({ ...cleanConfig, selectedColumns: Array.from(s) });
+                            setHasAppliedChanges(false);
+                          }}
+                        />
+                        <span style={{ fontWeight: 600, color: isSelected ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>{f}</span>
+                        <span className="mono" style={{ fontSize: '9px', color: colType === 'numeric' ? '#00e676' : '#38bdf8', background: 'rgba(255,255,255,0.05)', padding: '2px 5px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 3 }}>
+                          {colType}
+                        </span>
+                      </label>
+
+                      {/* Manual Rename Input */}
+                      <div style={{ flex: 1, minWidth: '190px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span className="mono" style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>Rename:</span>
+                        <input
+                          type="text"
+                          className="qmodal-input"
+                          style={{ padding: '6px 10px', fontSize: '12px' }}
+                          placeholder={`Keep as "${f}"`}
+                          value={cleanConfig.renameMap[f] || ''}
+                          onChange={(e) => {
+                            setCleanConfig({
+                              ...cleanConfig,
+                              renameMap: { ...cleanConfig.renameMap, [f]: e.target.value },
+                            });
+                            setHasAppliedChanges(false);
+                          }}
+                          disabled={!isSelected}
+                        />
+                      </div>
+
+                      {/* Missing Value Strategy Dropdown */}
+                      <div className="strat-group" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {isMissing ? (
+                          <span className="warning-text">{cleanPeek.missing[f]} missing</span>
+                        ) : (
+                          <span className="mono" style={{ fontSize: '10px', color: '#00e676' }}>0 missing</span>
+                        )}
+                        <select
+                          className="qmodal-select"
+                          style={{ padding: '6px 8px', fontSize: '11px', width: 'auto' }}
+                          value={strat.type}
+                          onChange={(e) => {
+                            setCleanConfig({
+                              ...cleanConfig,
+                              missingStrategies: {
+                                ...cleanConfig.missingStrategies,
+                                [f]: { type: e.target.value, value: '' },
+                              },
+                            });
+                            setHasAppliedChanges(false);
+                          }}
+                          disabled={!isSelected}
+                        >
+                          <option value="">Do nothing</option>
+                          <option value="drop">Drop rows</option>
+                          <option value="fill">Fill with value</option>
+                          {colType === 'numeric' && <option value="mean">Fill with mean</option>}
+                          {colType === 'numeric' && <option value="max">Fill with max</option>}
+                          {colType === 'numeric' && <option value="min">Fill with min</option>}
+                        </select>
+                        {strat.type === 'fill' && (
+                          <input
+                            type="text"
+                            className="qmodal-input"
+                            style={{ width: '80px', padding: '6px', fontSize: '11px' }}
+                            placeholder="Value"
+                            value={strat.value || ''}
+                            onChange={(e) => {
+                              setCleanConfig({
+                                ...cleanConfig,
+                                missingStrategies: {
+                                  ...cleanConfig.missingStrategies,
+                                  [f]: { ...strat, value: e.target.value },
+                                },
+                              });
+                              setHasAppliedChanges(false);
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+                  <button
+                    type="button"
+                    className="outline-button"
+                    style={{ fontSize: '11px', padding: '5px 12px' }}
+                    onClick={applyCustomCleaning}
+                  >
+                    <CheckCircle2 size={13} style={{ color: 'var(--accent-primary)' }} />
+                    {hasAppliedChanges ? 'Changes Applied' : 'Apply Column Changes'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="wizard-clean-action-box">
@@ -419,10 +640,17 @@ export default function AnalysisWizard({
               <CheckCircle2 size={20} className="check-icon" />
               <div>
                 <strong>Dataset Ready for Analysis ({cleaningStats.cleanedCount} Rows)</strong>
-                <p>Duplicate records filtered, missing numeric gaps median-filled, and data standardized.</p>
+                <p>Duplicate records filtered, missing numeric gaps handled, and columns standardized.</p>
               </div>
             </div>
-            <button type="button" className="execute-button" onClick={() => setStep(2)}>
+            <button
+              type="button"
+              className="execute-button"
+              onClick={() => {
+                applyCustomCleaning();
+                setStep(2);
+              }}
+            >
               Continue to Questions <ArrowRight size={14} />
             </button>
           </div>

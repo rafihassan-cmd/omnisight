@@ -152,7 +152,10 @@ function App(){
        groupCol: cat?.name || '',
      }));
      // Open questionnaire automatically with uploaded dataset columns
-     setModal('questionnaire');
+     setModal(null);
+      setView('Workbench');
+      setWorkbenchMode('wizard');
+      setActivePresetKey('custom');
    } catch(e) {
      console.error('File read error:', e);
    }

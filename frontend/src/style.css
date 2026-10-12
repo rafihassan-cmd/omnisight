@@ -958,5 +958,22 @@ html.light-theme img, html.light-theme canvas, html.light-theme video, html.ligh
     grid-template-columns: 1fr;
   }
 }
+.wizard-column-options-card {
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(0, 230, 118, 0.16);
+  border-radius: 10px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wizard-column-options-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 
 
