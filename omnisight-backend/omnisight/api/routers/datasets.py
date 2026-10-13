@@ -46,6 +46,15 @@ def upload_dataset(file: UploadFile = File(...), store: DatasetStore = Depends(g
     name = file.filename or "upload.csv"
     if not name.lower().endswith(".csv"):
         raise CleaningError("Only .csv files are supported right now.")
+
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+
+    if size > 50_000_000:
+        raise CleaningError(
+            "CSV uploads are limited to 50 MB."
+        )
     return _state(store.create(name, load_csv(file.file)), PreviewSelection())
 
 

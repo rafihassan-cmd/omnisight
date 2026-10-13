@@ -274,7 +274,39 @@ with controls:
                                     "handle_missing",
                                     params,
                                 )
+    st.divider()
+    st.subheader("Observation structure")
 
+    st.radio(
+        "Does the dataset contain repeated measurements "
+        "of the same person or entity?",
+        ["independent", "repeated", "unknown"],
+        index=2,
+        format_func={
+            "independent": (
+                "No; each row is a separate, "
+                "independent observation"
+            ),
+            "repeated": (
+                "Yes; a person or entity can appear "
+                "in several measurements"
+            ),
+            "unknown": "Not sure",
+        }.get,
+        key=f"observation_structure_{dataset_id}",
+    )
+
+    st.caption(
+        "Repeated or unknown observations still allow "
+        "graphs and key values. Tests requiring "
+        "independent observations are withheld."
+    )
+
+    if info["can_proceed"]:
+        st.page_link(
+            "pages/2_Analysis.py",
+            label="Next: Part 3 — data analysis →",
+        )
 with live:
     common.render_preview(dataset_id, info)
 
