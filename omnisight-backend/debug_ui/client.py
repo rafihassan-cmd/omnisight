@@ -74,3 +74,17 @@ def reset(dataset_id: str, version: int, selection: dict) -> dict:
 
 def export_csv(dataset_id: str) -> bytes:
     return _call("GET", f"/datasets/{dataset_id}/export").content
+
+def analysis_options(dataset_id: str) -> dict:
+    return _call(
+        "GET",
+        f"/datasets/{dataset_id}/analysis/options",
+    ).json()
+
+
+def analyze(dataset_id: str, payload: dict) -> dict:
+    return _call(
+        "POST",
+        f"/datasets/{dataset_id}/analysis",
+        json=payload,
+    ).json()
