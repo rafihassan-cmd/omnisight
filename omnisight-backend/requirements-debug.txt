@@ -1,3 +1,4 @@
  # Debug UI only: a thin HTTP client, never imports omnisight
 streamlit>=1.50
 requests>=2.31
+plotly>=6,<7
