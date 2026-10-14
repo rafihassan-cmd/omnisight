@@ -248,6 +248,7 @@ function ColumnBindings({ question, profile }) {
 export default function QuestionPlanner({
     dataset,
     onRefreshDataset,
+    onAnalysisExecuted,
     disabled = false,
 }) {
     const [catalog, setCatalog] = useState(null);
@@ -594,6 +595,10 @@ export default function QuestionPlanner({
                 requestKey,
                 response,
             });
+
+            if (onAnalysisExecuted) {
+                onAnalysisExecuted(response);
+            }
 
         } catch (err) {
             if (!controller.signal.aborted) {

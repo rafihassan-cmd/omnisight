@@ -762,32 +762,63 @@ export default function CleaningWorkspace({
 
             {isRowOperation ? (
               <div className="cleaning-field">
-                <strong>Target Columns</strong>
-
-                <p className="muted">
-                  Leave every checkbox unselected to use
-                  all columns.
-                </p>
+                <div className="cleaning-column-header">
+                  <div>
+                    <strong>Target Columns</strong>
+                    <p className="muted">
+                      Leave every checkbox unselected to use all columns, or select specific columns.
+                    </p>
+                  </div>
+                  <div className="cleaning-column-actions">
+                    <button
+                      type="button"
+                      className="bmw-btn-link"
+                      disabled={blocked}
+                      onClick={() =>
+                        setRowColumnIds(availableColumns.map((c) => c.id))
+                      }
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      className="bmw-btn-link"
+                      disabled={blocked || rowColumnIds.length === 0}
+                      onClick={() => setRowColumnIds([])}
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                </div>
 
                 <div className="cleaning-column-list">
-                  {availableColumns.map((column) => (
-                    <label key={column.id}>
-                      <input
-                        type="checkbox"
-                        checked={rowColumnIds.includes(
-                          column.id
-                        )}
-                        disabled={blocked}
-                        onChange={(event) =>
-                          toggleRowColumn(
-                            column.id,
-                            event.target.checked
-                          )
-                        }
-                      />
-                      {column.name}
-                    </label>
-                  ))}
+                  {availableColumns.map((column) => {
+                    const isSelected = rowColumnIds.includes(column.id);
+                    return (
+                      <label
+                        key={column.id}
+                        className={`cleaning-column-chip ${isSelected ? "selected" : ""}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={blocked}
+                          onChange={(event) =>
+                            toggleRowColumn(
+                              column.id,
+                              event.target.checked
+                            )
+                          }
+                        />
+                        <span className="cleaning-column-name" title={column.name}>
+                          {column.name}
+                        </span>
+                        <span className="cleaning-column-type">
+                          {column.data_type}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             ) : (

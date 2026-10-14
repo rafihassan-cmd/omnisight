@@ -104,6 +104,14 @@ function makeHistogram(chart) {
 
     customdata,
 
+    marker: {
+      color: "#00e676",
+      line: {
+        color: "#030507",
+        width: 1.5,
+      },
+    },
+
     hovertemplate:
       "Interval: %{customdata[0]} to %{customdata[1]}" +
       "<br>Frequency: %{y}<extra></extra>",
@@ -131,6 +139,13 @@ function makeBar(chart) {
     name: chart.y.label,
     x,
     y,
+    marker: {
+      color: "#00e676",
+      line: {
+        color: "#0b3b2c",
+        width: 1.5,
+      },
+    },
     hovertemplate:
       "%{x}<br>Value: %{y}<extra></extra>",
   };
@@ -168,8 +183,13 @@ function makeScatter(chart) {
     ),
 
     marker: {
-      size: 7,
-      opacity: 0.7,
+      size: 9,
+      color: "#00e676",
+      opacity: 0.85,
+      line: {
+        color: "#38bdf8",
+        width: 1.5,
+      },
     },
 
     hovertemplate:
@@ -192,6 +212,20 @@ function makeLine(chart) {
     y: chart.data.map((row) =>
       numericValue(row[yField], yField)
     ),
+
+    line: {
+      color: "#00e676",
+      width: 3,
+    },
+
+    marker: {
+      size: 7,
+      color: "#38bdf8",
+      line: {
+        color: "#030507",
+        width: 2,
+      },
+    },
 
     connectgaps: false,
 
@@ -235,21 +269,25 @@ export function toPlotlyFigure(chart) {
   const layout = {
     title: {
       text: chart.title,
-      x: 0.03,
+      x: 0.02,
       xanchor: "left",
       font: {
+        family: "'Space Grotesk', Inter, system-ui, sans-serif",
         size: 16,
+        color: "#edefef",
       },
     },
 
     autosize: true,
-    height: 450,
+    height: 480,
+    plot_bgcolor: "transparent",
+    paper_bgcolor: "transparent",
 
     margin: {
       l: 75,
-      r: 24,
+      r: 32,
       t: 75,
-      b: categorical ? 115 : 75,
+      b: categorical ? 110 : 75,
     },
 
     showlegend: false,
@@ -258,18 +296,50 @@ export function toPlotlyFigure(chart) {
     xaxis: {
       title: {
         text: chart.x.label,
+        font: {
+          family: "'Space Grotesk', Inter, system-ui, sans-serif",
+          size: 13,
+          color: "#98a2a2",
+        },
       },
       type: axisType(chart.x.data_type),
       automargin: true,
-      tickangle: categorical ? -30 : 0,
+      tickangle: categorical ? -35 : 0,
+      showline: true,
+      linecolor: "rgba(0, 230, 118, 0.25)",
+      linewidth: 1,
+      showgrid: true,
+      gridcolor: "rgba(0, 230, 118, 0.07)",
+      gridwidth: 1,
+      tickfont: {
+        family: "'JetBrains Mono', monospace",
+        size: 11,
+        color: "#98a2a2",
+      },
     },
 
     yaxis: {
       title: {
         text: chart.y.label,
+        font: {
+          family: "'Space Grotesk', Inter, system-ui, sans-serif",
+          size: 13,
+          color: "#98a2a2",
+        },
       },
       type: axisType(chart.y.data_type),
       automargin: true,
+      showline: true,
+      linecolor: "rgba(0, 230, 118, 0.25)",
+      linewidth: 1,
+      showgrid: true,
+      gridcolor: "rgba(0, 230, 118, 0.07)",
+      gridwidth: 1,
+      tickfont: {
+        family: "'JetBrains Mono', monospace",
+        size: 11,
+        color: "#98a2a2",
+      },
 
       ...(chart.kind === "bar" ||
       chart.kind === "histogram"
@@ -277,9 +347,7 @@ export function toPlotlyFigure(chart) {
         : {}),
     },
 
-    ...(chart.kind === "histogram"
-      ? { bargap: 0 }
-      : { bargap: 0.2 }),
+    bargap: chart.kind === "histogram" ? 0.1 : 0.35,
   };
 
   const config = {
