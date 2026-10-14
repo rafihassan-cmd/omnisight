@@ -10,6 +10,8 @@ export default function HistoryDrawer({
   disabled,
   onDatasetChanged,
   onRefreshDataset,
+  executionsHistory = [],
+  onSelectExecution,
 }) {
   const [history, setHistory] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -17,12 +19,22 @@ export default function HistoryDrawer({
   const [error, setError] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
+  const [activeTab, setActiveTab] = useState("analyses"); // "analyses" | "mutations"
 
   const hoverTimeoutRef = useRef(null);
   const drawerRef = useRef(null);
 
   const datasetId = dataset?.dataset_id;
   const datasetVersion = dataset?.version;
+
+  // Auto-switch to mutations tab if there are dataset operations and no executions yet
+  useEffect(() => {
+    if (history?.history_count > 0 && executionsHistory.length === 0) {
+      setActiveTab("mutations");
+    } else if (executionsHistory.length > 0) {
+      setActiveTab("analyses");
+    }
+  }, [history?.history_count, executionsHistory.length]);
 
   useEffect(() => {
     if (!datasetId) {
@@ -118,6 +130,8 @@ export default function HistoryDrawer({
   }
 
   const opCount = history?.history_count ?? 0;
+  const execCount = executionsHistory.length;
+  const totalEventCount = opCount + execCount;
   const blocked = disabled || actionBusy || loading;
 
   return (
@@ -138,12 +152,14 @@ export default function HistoryDrawer({
           setIsPinned(!isPinned);
           setIsOpen(!isOpen);
         }}
-        title="Hover to inspect Reversible Audit Stream (Click to pin)"
+        title="Hover to inspect Telemetry & Execution History (Click to pin)"
         aria-expanded={isOpen}
       >
         <span className="telemetry-tab-dot" />
-        <span className="telemetry-tab-text">AUDIT TRAIL</span>
-        {opCount > 0 && <span className="telemetry-tab-badge">{opCount}</span>}
+        <span className="telemetry-tab-text">EXECUTION LOG</span>
+        {totalEventCount > 0 && (
+          <span className="telemetry-tab-badge">{totalEventCount}</span>
+        )}
       </button>
 
       {/* Slide-out Drawer from the left */}
@@ -152,14 +168,14 @@ export default function HistoryDrawer({
         className={`telemetry-drawer ${isOpen ? "drawer-open" : ""}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        aria-label="Unified Change History & Audit Drawer"
+        aria-label="Execution History & Reversible Audit Drawer"
       >
         <div className="drawer-header">
           <div>
-            <span className="eyebrow">OMNISIGHT / REVERSIBLE AUDIT</span>
+            <span className="eyebrow">OMNISIGHT / TELEMETRY AUDIT</span>
             <h3 className="drawer-title">Execution History</h3>
             <p className="drawer-subtitle">
-              Chronological log of committed transformations and column operations.
+              Live audit of analytical inquiries, data cleanings, and reversible operations.
             </p>
           </div>
 
@@ -196,75 +212,155 @@ export default function HistoryDrawer({
 
           {dataset && (
             <>
-              <div className="drawer-stats-row">
-                <span className="workspace-pill">
-                  <span className="mono">REVISION:</span> v{dataset.version}
-                </span>
-                <span className="workspace-pill">
-                  <span className="mono">COMMITTED:</span> {opCount}
-                </span>
-                {loading && <span className="live-label">SYNCING...</span>}
+              {/* Dual Tab Switcher */}
+              <div className="drawer-tab-switcher">
+                <button
+                  type="button"
+                  className={`drawer-tab-btn ${activeTab === "analyses" ? "active" : ""}`}
+                  onClick={() => setActiveTab("analyses")}
+                >
+                  ANALYSES RUN ({execCount})
+                </button>
+                <button
+                  type="button"
+                  className={`drawer-tab-btn ${activeTab === "mutations" ? "active" : ""}`}
+                  onClick={() => setActiveTab("mutations")}
+                >
+                  DATA AUDIT ({opCount})
+                </button>
               </div>
 
-              {error && (
-                <div className="error-message" role="alert">
-                  {error}
+              {/* TAB 1: Analyses Executed */}
+              {activeTab === "analyses" && (
+                <div className="drawer-tab-pane">
+                  {execCount === 0 ? (
+                    <div className="empty-state" style={{ padding: "24px 0" }}>
+                      <p className="muted">
+                        No analytical inquiries executed yet.
+                      </p>
+                      <small style={{ color: "var(--text-tertiary)", display: "block", marginTop: "6px" }}>
+                        Select and click &ldquo;Execute Analysis&rdquo; in Stage 04 (Question Planner) to track analysis runs and results here.
+                      </small>
+                    </div>
+                  ) : (
+                    <div className="log-list">
+                      {executionsHistory.map((record, index) => (
+                        <div key={record.id || index} className="log-item">
+                          <div className="log-item-header">
+                            <span className="mono" style={{ color: "var(--accent-primary)" }}>
+                              #{execCount - index}
+                            </span>
+                            <strong className="log-kind">{record.title}</strong>
+                            <time>
+                              {new Date(record.timestamp).toLocaleTimeString()}
+                            </time>
+                          </div>
+
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                            <span className="sample-badge" style={{ textTransform: "uppercase" }}>
+                              {record.method}
+                            </span>
+                            {onSelectExecution && (
+                              <button
+                                type="button"
+                                className="bmw-btn-link"
+                                style={{ fontSize: "11px", fontWeight: "600" }}
+                                onClick={() => {
+                                  onSelectExecution(record.response);
+                                  setIsPinned(false);
+                                  setIsOpen(false);
+                                }}
+                              >
+                                VIEW IN STAGE 05 →
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="drawer-actions">
-                <button
-                  type="button"
-                  className="outline-button"
-                  onClick={handleUndo}
-                  disabled={blocked || !history?.can_undo}
-                  title="Undo the most recent change"
-                >
-                  {actionBusy ? "PROCESSING..." : "UNDO LATEST CHANGE"}
-                </button>
-
-                <button
-                  type="button"
-                  className="danger-button"
-                  onClick={handleReset}
-                  disabled={blocked || !history?.can_reset}
-                  title="Revert back to the original CSV"
-                >
-                  RESET TO ORIGINAL CSV
-                </button>
-              </div>
-
-              <div className="drawer-log-list">
-                {!history || history.operations.length === 0 ? (
-                  <p className="muted" style={{ padding: "12px 0" }}>
-                    No operations committed to history yet.
-                  </p>
-                ) : (
-                  <div className="log-list">
-                    {history.operations.map((record, index) => (
-                      <div key={record.id || index} className="log-item">
-                        <div className="log-item-header">
-                          <span className="mono" style={{ color: "var(--accent-primary)" }}>
-                            #{history.operations.length - index}
-                          </span>
-                          <strong className="log-kind">{record.kind}</strong>
-                          <time>
-                            {new Date(record.created_at).toLocaleTimeString()}
-                          </time>
-                        </div>
-
-                        <details className="log-details">
-                          <summary>Inspect details</summary>
-                          <pre className="log-json">
-                            {JSON.stringify(record.details, null, 2)}
-                          </pre>
-                        </details>
-                      </div>
-                    ))}
+              {/* TAB 2: Data Mutations & Cleaning Operations */}
+              {activeTab === "mutations" && (
+                <div className="drawer-tab-pane">
+                  <div className="drawer-stats-row">
+                    <span className="workspace-pill">
+                      <span className="mono">REVISION:</span> v{dataset.version}
+                    </span>
+                    <span className="workspace-pill">
+                      <span className="mono">COMMITTED:</span> {opCount}
+                    </span>
+                    {loading && <span className="live-label">SYNCING...</span>}
                   </div>
-                )}
-              </div>
+
+                  {error && (
+                    <div className="error-message" role="alert">
+                      {error}
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="drawer-actions">
+                    <button
+                      type="button"
+                      className="outline-button"
+                      onClick={handleUndo}
+                      disabled={blocked || !history?.can_undo}
+                      title={history?.can_undo ? "Undo the most recent change" : "No committed changes to undo"}
+                    >
+                      {actionBusy ? "PROCESSING..." : "UNDO LATEST CHANGE"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="danger-button"
+                      onClick={handleReset}
+                      disabled={blocked || !history?.can_reset}
+                      title={history?.can_reset ? "Revert back to original raw CSV" : "Already on initial version"}
+                    >
+                      RESET TO ORIGINAL CSV
+                    </button>
+                  </div>
+
+                  <div className="drawer-log-list">
+                    {!history || history.operations.length === 0 ? (
+                      <div className="empty-state" style={{ padding: "16px 0" }}>
+                        <p className="muted">
+                          No operations committed to history yet.
+                        </p>
+                        <small style={{ color: "var(--text-tertiary)", display: "block", marginTop: "6px" }}>
+                          Transformations applied in Stage 03 (Cleaning) or columns dropped in Stage 02 are recorded here and can be undone or reset.
+                        </small>
+                      </div>
+                    ) : (
+                      <div className="log-list">
+                        {history.operations.map((record, index) => (
+                          <div key={record.id || index} className="log-item">
+                            <div className="log-item-header">
+                              <span className="mono" style={{ color: "var(--accent-primary)" }}>
+                                #{history.operations.length - index}
+                              </span>
+                              <strong className="log-kind">{record.kind}</strong>
+                              <time>
+                                {new Date(record.created_at).toLocaleTimeString()}
+                              </time>
+                            </div>
+
+                            <details className="log-details">
+                              <summary>Inspect details</summary>
+                              <pre className="log-json">
+                                {JSON.stringify(record.details, null, 2)}
+                              </pre>
+                            </details>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

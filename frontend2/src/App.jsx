@@ -29,6 +29,7 @@ function App() {
   const [dataset, setDataset] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [activeExecution, setActiveExecution] = useState(null);
+  const [executionsHistory, setExecutionsHistory] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -276,6 +277,11 @@ function App() {
         disabled={busy}
         onDatasetChanged={handleDatasetChanged}
         onRefreshDataset={handleRefreshSession}
+        executionsHistory={executionsHistory}
+        onSelectExecution={(exec) => {
+          setActiveExecution(exec);
+          setCurrentStep(5);
+        }}
       />
 
       {/* Topbar Navigation from Sami design */}
@@ -432,6 +438,17 @@ function App() {
               onRefreshDataset={handleRefreshSession}
               onAnalysisExecuted={(res) => {
                 setActiveExecution(res);
+                setExecutionsHistory((prev) => [
+                  {
+                    id: res.execution_id || `inq-${Date.now()}`,
+                    question_id: res.plan?.question_id,
+                    title: res.plan?.title || "Analytical Inquiry",
+                    method: res.plan?.analysis_method || "Statistical Analysis",
+                    timestamp: new Date().toISOString(),
+                    response: res,
+                  },
+                  ...prev,
+                ]);
               }}
             />
           </div>
