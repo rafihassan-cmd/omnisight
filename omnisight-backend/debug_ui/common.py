@@ -8,6 +8,19 @@ import client
 
 
 def accept_state(state: dict, new_upload: bool = False):
+    previous = st.session_state.get("dataset_state")
+
+    if new_upload or not previous or (
+        previous["dataset_id"],
+        previous["version"],
+    ) != (
+        state["dataset_id"],
+        state["version"],
+    ):
+        st.session_state.pop(
+            "analysis_result",
+            None,
+        )
     st.session_state["dataset_state"] = state
     st.session_state["dataset_id"] = state["dataset_id"]
     ids = [c["id"] for c in state["columns_info"]]
