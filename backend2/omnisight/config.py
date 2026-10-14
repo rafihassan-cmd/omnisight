@@ -1,7 +1,17 @@
-"""Central application configuration."""
-
 import os
 from dataclasses import dataclass
+from pathlib import Path
+# Automatically load environment variables from .env in backend2 or parent dir
+try:
+    from dotenv import load_dotenv
+    _backend_dir = Path(__file__).resolve().parent.parent
+    _env_file = _backend_dir / ".env"
+    if _env_file.is_file():
+        load_dotenv(_env_file)
+    else:
+        load_dotenv()
+except ImportError:
+    pass
 
 
 def env_bool(name: str, default: bool = False) -> bool:

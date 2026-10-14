@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 
 from google import genai
 from google.genai import errors, types
@@ -111,77 +112,101 @@ def generate_gemini_insights(
         )
     )
 
+    models_to_try = [model]
+    for fallback in ["gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.8-flash"]:
+        if fallback not in models_to_try:
+            models_to_try.append(fallback)
+
     try:
-        # Context manager closes the HTTP client.
-        with genai.Client(
-            api_key=api_key,
-            http_options=types.HttpOptions(
-                timeout=timeout_ms,
-            ),
-        ) as client:
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTIONS,
-                    response_mime_type="application/json",
-                    response_schema=InsightContent,
-                    temperature=0.2,
-                    max_output_tokens=2048,
-                ),
-            )
+        last_error = None
+        for attempt_model in models_to_try:
+            for attempt in range(2):
+                try:
+                    with genai.Client(
+                        api_key=api_key,
+                        http_options=types.HttpOptions(
+                            timeout=timeout_ms,
+                        ),
+                    ) as client:
+                        response = client.models.generate_content(
+                            model=attempt_model,
+                            contents=prompt,
+                            config=types.GenerateContentConfig(
+                                system_instruction=SYSTEM_INSTRUCTIONS,
+                                response_mime_type="application/json",
+                                response_schema=InsightContent,
+                                temperature=0.2,
+                                max_output_tokens=2048,
+                            ),
+                        )
 
-        if isinstance(response.parsed, InsightContent):
-            content = response.parsed
-        elif response.parsed is not None:
-            content = InsightContent.model_validate(
-                response.parsed
-            )
-        elif response.text:
-            content = InsightContent.model_validate_json(
-                response.text
-            )
-        else:
+                    if isinstance(response.parsed, InsightContent):
+                        content = response.parsed
+                    elif response.parsed is not None:
+                        content = InsightContent.model_validate(
+                            response.parsed
+                        )
+                    elif response.text:
+                        content = InsightContent.model_validate_json(
+                            response.text
+                        )
+                    else:
+                        raise GeminiServiceError(
+                            "Gemini returned no usable interpretation."
+                        )
+
+                    content = trim_content(content)
+
+                    if not content.headline or not content.summary:
+                        raise GeminiServiceError(
+                            "Gemini returned an incomplete interpretation."
+                        )
+
+                    return content
+
+                except GeminiServiceError:
+                    raise
+
+                except errors.APIError as exc:
+                    logger.warning(
+                        "Gemini API returned status %s for model %s (attempt %s)",
+                        exc.code,
+                        attempt_model,
+                        attempt + 1,
+                    )
+                    last_error = exc
+
+                    if exc.code in (401, 403):
+                        raise GeminiServiceError(
+                            "Gemini authentication or access failed. "
+                            "Check the backend API key and model access.",
+                            status_code=503,
+                        ) from exc
+
+                    # If temporary 503 spike, wait briefly and retry the same model
+                    if exc.code == 503 and attempt < 1:
+                        time.sleep(1.5)
+                        continue
+
+                    # If quota 429 or persistent 503, break out to next model
+                    if exc.code in (429, 503):
+                        break
+
+                    raise GeminiServiceError(
+                        "The Gemini service could not complete the interpretation.",
+                        status_code=502,
+                    ) from exc
+
+        if last_error and getattr(last_error, "code", None) == 429:
             raise GeminiServiceError(
-                "Gemini returned no usable interpretation."
-            )
-
-        content = trim_content(content)
-
-        if not content.headline or not content.summary:
-            raise GeminiServiceError(
-                "Gemini returned an incomplete interpretation."
-            )
-
-        return content
-
-    except GeminiServiceError:
-        raise
-
-    except errors.APIError as exc:
-        logger.warning(
-            "Gemini API returned status %s",
-            exc.code,
-        )
-
-        if exc.code == 429:
-            raise GeminiServiceError(
-                "Gemini request quota or rate limit reached.",
+                "Gemini request quota reached for the day.",
                 status_code=429,
-            ) from exc
-
-        if exc.code in (401, 403):
-            raise GeminiServiceError(
-                "Gemini authentication or access failed. "
-                "Check the backend API key and model access.",
-                status_code=503,
-            ) from exc
+            )
 
         raise GeminiServiceError(
-            "The Gemini service could not complete "
-            "the interpretation.",
+            f"The Gemini service could not complete the interpretation: {last_error}",
             status_code=502,
-        ) from exc
+        )
 
     except (ValidationError, ValueError) as exc:
         logger.warning(
