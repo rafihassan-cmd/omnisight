@@ -1,7 +1,6 @@
 """Part 1 frontend. Run with: streamlit run debug_ui/Home.py"""
 import pandas as pd
 import streamlit as st
-
 import client
 import common
 

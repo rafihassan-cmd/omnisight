@@ -9,7 +9,7 @@ from omnisight.config import settings
 from omnisight.core.errors import CleaningError, VersionConflict
 from omnisight.services.datasets import DatasetNotFound
 
-from .routers import datasets
+from .routers import analysis, datasets
 
 
 def create_app() -> FastAPI:
@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
 
     # Mount point for future phases: app.include_router(stats.router), charts.router, ...
     app.include_router(datasets.router)
+    app.include_router(analysis.router)
     return app
 
 

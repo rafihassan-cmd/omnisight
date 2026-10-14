@@ -1,0 +1,6 @@
+## ALL PROBLEM AND SUGGESSTION RELATED THE PROECT
+
+-> Outlier detection and Removal
+-> ANOVA
+-> F-test,p-test,z-test
+-> int value must show x and y axis in int 
