@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 *.csv
 .pytest_cache/
+backend2/.env
