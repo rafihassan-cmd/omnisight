@@ -13,6 +13,7 @@ import {
   getCurrentDataset,
   deleteCurrentDataset,
   renameDatasetColumn,
+  deleteDatasetColumn
 } from "./api/datasets";
 
 import DatasetOverview from "./features/overview/DatasetOverview";
@@ -213,6 +214,44 @@ function App() {
     }
   }
 
+  async function handleDeleteColumn(
+  columnId,
+  columnName
+) {
+  if (!dataset || busy) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Delete column "${columnName}"?\n\n` +
+    "This removes the column from the working dataset " +
+    "and records the deletion in history.\n\n" +
+    "You can restore it using Undo or Reset."
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  setUploading(true);
+  setError("");
+
+  try {
+    const updated = await deleteDatasetColumn(
+      columnId,
+      dataset.version
+    );
+
+    setDataset(updated);
+
+  } catch (err) {
+    setError(err.message);
+    throw err;
+
+  } finally {
+    setUploading(false);
+  }
+}
 
   async function handleRenameColumn(columnId, newName) {
     if (!dataset) {
@@ -351,6 +390,7 @@ function App() {
           key={`overview-${dataset.dataset_id}`}
           dataset={dataset}
           onRename={handleRenameColumn}
+          onDelete={handleDeleteColumn}
           disabled={busy}
         />
 

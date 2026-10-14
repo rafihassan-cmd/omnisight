@@ -30,6 +30,14 @@ def definition(
 
 
 CHANGE_REGISTRY: dict[str, ChangeDefinition] = {
+    "column.drop": ChangeDefinition(
+        kind="column.drop",
+        label="Delete Column",
+        category="column",
+        requires_preview=False,
+        changes_schema=True,
+    ),
+
     "column.rename": definition(
         "column.rename",
         "Rename Column",
