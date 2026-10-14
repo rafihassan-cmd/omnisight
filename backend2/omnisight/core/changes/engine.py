@@ -33,6 +33,65 @@ class ColumnNameConflict(Exception):
 class InvalidColumnName(Exception):
     pass
 
+class CannotDropLastColumn(ValueError):
+    pass
+
+def apply_column_drop(
+    dataframe: pd.DataFrame,
+    column_ids: list[str],
+    parameters: dict[str, Any],
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Delete exactly one column using its stable ID."""
+
+    if set(parameters) != {"column_id"}:
+        raise ValueError(
+            "Column deletion requires only 'column_id'."
+        )
+
+    column_id = parameters["column_id"]
+
+    if (
+        not isinstance(column_id, str)
+        or column_id not in column_ids
+    ):
+        raise ColumnNotFound(
+            f"Column '{column_id}' was not found."
+        )
+
+    if len(column_ids) <= 1:
+        raise CannotDropLastColumn(
+            "Cannot delete the last remaining column."
+        )
+
+    if len(column_ids) != len(dataframe.columns):
+        raise ValueError(
+            "Column IDs and DataFrame columns are misaligned."
+        )
+
+    position = column_ids.index(column_id)
+
+    column_name = str(
+        dataframe.columns[position]
+    )
+
+    remaining_positions = [
+        index
+        for index in range(len(column_ids))
+        if index != position
+    ]
+
+    result = dataframe.iloc[
+        :, remaining_positions
+    ].copy(deep=False)
+
+    return result, {
+        "changed": True,
+        "column_id": column_id,
+        "column_name": column_name,
+        "column_position": position,
+        "columns_before": len(column_ids),
+        "columns_after": len(remaining_positions),
+    }
 
 def apply_column_rename(
     dataframe: pd.DataFrame,
@@ -124,6 +183,7 @@ def apply_column_rename(
 
 
 CHANGE_HANDLERS = {
+    "column.drop": apply_column_drop,
     "column.rename": apply_column_rename,
 
     "rows.drop_duplicates": drop_duplicates,

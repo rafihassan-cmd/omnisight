@@ -36,6 +36,43 @@ class DatasetMemoryLimitError(Exception):
 class UndoUnavailable(Exception):
     """No committed operation is available to undo."""
 
+def column_ids_for_history(
+    dataset: DatasetState,
+    history: list[ChangeRecord],
+) -> list[str]:
+    """
+    Reconstruct active column IDs from the original IDs
+    and committed operations.
+
+    Column names and data types may change, but the
+    stable IDs only disappear through column.drop.
+    """
+
+    working_ids = list(
+        dataset.original_column_ids
+    )
+
+    for record in history:
+        if record.kind != "column.drop":
+            continue
+
+        column_id = record.parameters["column_id"]
+
+        if column_id not in working_ids:
+            raise RuntimeError(
+                "Invalid history: a column was dropped "
+                "more than once or no longer exists."
+            )
+
+        if len(working_ids) <= 1:
+            raise RuntimeError(
+                "Invalid history: the last column "
+                "cannot be deleted."
+            )
+
+        working_ids.remove(column_id)
+
+    return working_ids
 
 @dataclass(frozen=True)
 class ChangeRecord:
@@ -83,6 +120,16 @@ class DatasetState:
     insights_cache: dict[str, dict] = field(
         default_factory=dict
     )
+
+    original_column_ids: list[str] = field(
+    default_factory=list
+    )
+
+    def __post_init__(self):
+        if not self.original_column_ids:
+            self.original_column_ids = list(
+                self.column_ids
+            )
 
 
 def create_dataset(
@@ -233,12 +280,26 @@ def commit_dataset_change(
         created_at=datetime.now(timezone.utc),
     )
 
-    # Prepare the updated history first.
+    # Prepare the updated state before committing.
     new_history = [*dataset.history, record]
 
-    # Commit the completed transformation.
+    new_column_ids = column_ids_for_history(
+        dataset,
+        new_history,
+    )
+
+    if len(new_column_ids) != len(result.columns):
+        raise RuntimeError(
+            "Column IDs are inconsistent with "
+            "the transformed dataset."
+        )
+
+    # All validations passed. Commit atomically
+    # with respect to ordinary Python exceptions
+    # while the caller holds the session lock.
     dataset.current = result
     dataset.history = new_history
+    dataset.column_ids = new_column_ids
     dataset.estimated_memory_bytes = memory_bytes
     dataset.version += 1
 
@@ -269,27 +330,51 @@ def rename_dataset_column(
 
     return updated
 
-
 def replay_dataset_history(
     dataset: DatasetState,
     history: list[ChangeRecord],
     max_memory_bytes: int | None = None,
 ) -> pd.DataFrame:
     """
-    Reconstruct working data from original + history.
+    Reconstruct the working DataFrame from the original
+    dataset by replaying committed operations.
 
-    No session state is modified during reconstruction.
+    Maintain column IDs throughout the replay.
     """
 
     working = dataset.original.copy(deep=False)
+    working_ids = list(dataset.original_column_ids)
 
     for record in history:
+        if len(working_ids) != len(working.columns):
+            raise RuntimeError(
+                "Column metadata became misaligned "
+                "during history replay."
+            )
+
         working, _ = apply_change(
             dataframe=working,
-            column_ids=dataset.column_ids,
+            column_ids=working_ids,
             kind=record.kind,
             parameters=copy.deepcopy(record.parameters),
         )
+
+        if record.kind == "column.drop":
+            column_id = record.parameters["column_id"]
+
+            if column_id not in working_ids:
+                raise RuntimeError(
+                    "History references an already deleted "
+                    "or unknown column."
+                )
+
+            working_ids.remove(column_id)
+
+        if len(working_ids) != len(working.columns):
+            raise RuntimeError(
+                "History replay produced inconsistent "
+                "column metadata."
+            )
 
         enforce_memory_limit(
             dataframe_memory_bytes(working),
@@ -305,9 +390,10 @@ def undo_dataset_change(
     max_memory_bytes: int | None = None,
 ) -> tuple[DatasetState, ChangeRecord]:
     """
-    Reverse the latest committed operation.
+    Undo the most recent committed operation.
 
-    Replay is completed before any state is changed.
+    Reconstruct and validate everything before
+    modifying the active dataset state.
     """
 
     check_dataset_version(
@@ -323,12 +409,26 @@ def undo_dataset_change(
     undone_record = dataset.history[-1]
     remaining_history = dataset.history[:-1]
 
-    # If replay fails, current state remains unchanged.
+    # Reconstruct the DataFrame without mutating state.
     reconstructed = replay_dataset_history(
         dataset,
         remaining_history,
         max_memory_bytes=max_memory_bytes,
     )
+
+    # Reconstruct stable column IDs.
+    new_column_ids = column_ids_for_history(
+        dataset,
+        remaining_history,
+    )
+
+    if len(new_column_ids) != len(
+        reconstructed.columns
+    ):
+        raise RuntimeError(
+            "Restored column IDs do not match "
+            "the reconstructed DataFrame."
+        )
 
     memory_bytes = dataframe_memory_bytes(
         reconstructed
@@ -339,15 +439,16 @@ def undo_dataset_change(
         max_memory_bytes,
     )
 
+    # All checks passed. Commit the restored state.
     dataset.current = reconstructed
     dataset.history = remaining_history
+    dataset.column_ids = new_column_ids
     dataset.estimated_memory_bytes = memory_bytes
     dataset.version += 1
 
     invalidate_profile(dataset)
 
     return dataset, undone_record
-
 
 def reset_dataset_changes(
     dataset: DatasetState,
@@ -383,6 +484,9 @@ def reset_dataset_changes(
     dataset.history = []
     dataset.estimated_memory_bytes = memory_bytes
     dataset.version += 1
+    dataset.column_ids = list(
+        dataset.original_column_ids
+    )
 
     invalidate_profile(dataset)
 

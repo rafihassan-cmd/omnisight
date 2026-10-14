@@ -160,3 +160,6 @@ def serialize_dataset_history(
         can_reset=has_changes,
         operations=operations,
     )
+
+class DeleteColumnRequest(BaseModel):
+    expected_version: int = Field(ge=0)

@@ -83,6 +83,7 @@ function NumericStatistics({ statistics }) {
 export default function DatasetOverview({
   dataset,
   onRename,
+  onDelete,
   disabled = false,
 }) {
   const [profile, setProfile] = useState(null);
@@ -97,6 +98,8 @@ export default function DatasetOverview({
   const [draftName, setDraftName] = useState("");
   const [renameError, setRenameError] = useState("");
   const [renaming, setRenaming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const datasetId = dataset.dataset_id;
   const datasetVersion = dataset.version;
@@ -149,7 +152,7 @@ export default function DatasetOverview({
 
   const currentProfile =
     profile?.dataset_id === datasetId &&
-    profile?.dataset_version === datasetVersion
+      profile?.dataset_version === datasetVersion
       ? profile
       : null;
 
@@ -166,6 +169,34 @@ export default function DatasetOverview({
     setRenameError("");
   }, [selectedColumn?.id, selectedColumn?.name]);
 
+  async function handleDelete() {
+    if (
+      !selectedColumn ||
+      disabled ||
+      deleting ||
+      renaming
+    ) {
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteError("");
+
+    try {
+      await onDelete(
+        selectedColumn.id,
+        selectedColumn.name
+      );
+
+    } catch (err) {
+      setDeleteError(
+        err.message || "Could not delete the column."
+      );
+
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   async function handleRename(event) {
     event.preventDefault();
@@ -382,7 +413,44 @@ export default function DatasetOverview({
                   statistics={selectedColumn.numeric_stats}
                 />
               )}
+              <div className="column-delete-section">
+                <h4>Delete Column</h4>
 
+                <p className="muted">
+                  Remove the selected column from your working
+                  dataset. The deletion is recorded in history
+                  and can be undone.
+                </p>
+
+                <button
+                  type="button"
+                  className="danger-button"
+                  onClick={handleDelete}
+                  disabled={
+                    disabled ||
+                    deleting ||
+                    renaming ||
+                    !selectedColumn ||
+                    profile.columns.length <= 1
+                  }
+                >
+                  {deleting
+                    ? "Deleting..."
+                    : `Delete "${selectedColumn?.name ?? "Column"}"`}
+                </button>
+
+                {profile.columns.length <= 1 && (
+                  <p className="muted">
+                    At least one column must remain in the dataset.
+                  </p>
+                )}
+
+                {deleteError && (
+                  <p className="error" role="alert">
+                    {deleteError}
+                  </p>
+                )}
+              </div>
               <h4>Rename Column</h4>
 
               <form

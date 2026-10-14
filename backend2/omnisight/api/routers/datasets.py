@@ -21,11 +21,16 @@ from omnisight.api.deps import (
     get_session_store,
     require_mutation_header,
 )
+from omnisight.core.changes.engine import (
+    CannotDropLastColumn,
+    ColumnNotFound,
+)
 from omnisight.api.schemas.datasets import (
     DatasetSummary,
     DatasetProfileResponse,
     RenameColumnRequest,
     serialize_dataset,
+    DeleteColumnRequest,
 )
 from omnisight.core.io import (
     CSVParseError,
@@ -41,6 +46,8 @@ from omnisight.services.datasets import (
     ColumnNotFound,
     ColumnNameConflict,
     InvalidColumnName,
+    commit_dataset_change,
+    
 )
 from omnisight.services.sessions import (
     SessionState,
@@ -380,3 +387,73 @@ def get_dataset_history(
             )
 
         return serialize_dataset_history(dataset)
+
+@router.delete(
+    "/current/columns/{column_id}",
+    response_model=DatasetSummary,
+    dependencies=[Depends(require_mutation_header)],
+)
+def delete_dataset_column(
+    column_id: str,
+    body: DeleteColumnRequest,
+    session: SessionState = Depends(get_active_session),
+):
+    """
+    Delete one column from the working dataset.
+
+    The operation is committed to unified history
+    and can be reversed through the normal Undo API.
+    """
+
+    with session.lock:
+        dataset = session.dataset
+
+        if dataset is None:
+            raise HTTPException(
+                status_code=404,
+                detail="No dataset uploaded.",
+            )
+
+        try:
+            updated, record = commit_dataset_change(
+                dataset=dataset,
+                kind="column.drop",
+                parameters={
+                    "column_id": column_id,
+                },
+                expected_version=body.expected_version,
+                max_memory_bytes=(
+                    settings.max_dataset_memory_bytes
+                ),
+            )
+
+        except DatasetVersionConflict as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=str(exc),
+            ) from exc
+
+        except ColumnNotFound as exc:
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            ) from exc
+
+        except CannotDropLastColumn as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=str(exc),
+            ) from exc
+
+        except DatasetMemoryLimitError as exc:
+            raise HTTPException(
+                status_code=413,
+                detail=str(exc),
+            ) from exc
+
+        # An outstanding cleaning preview belongs to
+        # the previous dataset revision.
+        if record is not None:
+            session.pending_preview = None
+
+        return serialize_dataset(updated)

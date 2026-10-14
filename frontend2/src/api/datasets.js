@@ -109,6 +109,49 @@ export async function getCurrentDatasetProfile({
   return handleResponse(response);
 }
 
+export async function deleteDatasetColumn(
+  columnId,
+  expectedVersion
+) {
+  const response = await fetch(
+    `${API_BASE}/datasets/current/columns/${encodeURIComponent(
+      columnId
+    )}`,
+    {
+      method: "DELETE",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-OmniSight-Request": "1",
+      },
+      body: JSON.stringify({
+        expected_version: expectedVersion,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const body = await response
+      .json()
+      .catch(() => null);
+
+    const detail = body?.detail;
+
+    const message =
+      typeof detail === "string"
+        ? detail
+        : typeof detail?.message === "string"
+          ? detail.message
+          : `Column deletion failed (${response.status}).`;
+
+    const error = new Error(message);
+    error.status = response.status;
+
+    throw error;
+  }
+
+  return response.json();
+}
 
 /**
  * Rename a dataset column using its stable identifier.
