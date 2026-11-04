@@ -1,7 +1,19 @@
 """Registry of supported dataset mutations."""
 
 from dataclasses import dataclass
+from omnisight.core.changes.cleaning import normalize_column_values
 
+REGISTERED_CHANGES = {
+    # ... existing registrations
+    "text.normalize_values": {
+        "handler": lambda df, params: normalize_column_values(
+            df, 
+            column=params.get("column_id") or params.get("column"), 
+            value_map=params["value_map"]
+        ),
+        "description": lambda params: f"Normalized values in column '{params.get('column_id') or params.get('column')}'"
+    }
+}
 
 @dataclass(frozen=True)
 class ChangeDefinition:
@@ -88,6 +100,12 @@ CHANGE_REGISTRY: dict[str, ChangeDefinition] = {
         "text",
     ),
 
+    "text.normalize_values": definition(
+        "text.normalize_values",
+        "Bulk Edit / Normalize Values",
+        "text",
+    ),
+
     "column.to_numeric": definition(
         "column.to_numeric",
         "Convert to Numeric",
@@ -100,6 +118,12 @@ CHANGE_REGISTRY: dict[str, ChangeDefinition] = {
         "Convert to Datetime",
         "conversion",
         changes_schema=True,
+    ),
+
+    "rows.drop_outliers": definition(
+        "rows.drop_outliers",
+        "Remove Outlier Rows (Value Range)",
+        "rows",
     ),
 }
 

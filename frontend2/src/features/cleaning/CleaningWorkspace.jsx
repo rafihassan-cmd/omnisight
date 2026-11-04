@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import {
   getCleaningOperations,
@@ -7,6 +7,7 @@ import {
   applyCleaning,
   undoCleaning,
   resetCleaning,
+  fetchValueSuggestions,
 } from "../../api/cleaning";
 
 import {
@@ -17,11 +18,13 @@ import {
 const SUPPORTED_KINDS = new Set([
   "rows.drop_duplicates",
   "rows.drop_missing",
+  "rows.drop_outliers",
   "missing.fill_mean",
   "missing.fill_constant",
   "text.trim",
   "text.strip_affixes",
   "text.remove_separators",
+  "text.normalize_values",
   "column.to_numeric",
   "column.to_datetime",
 ]);
@@ -35,6 +38,12 @@ const TEXT_TYPES = new Set([
 
 
 function eligibleColumns(columns, kind) {
+  if (kind === "rows.drop_outliers") {
+    return columns.filter(
+      (column) => column.semantic_type === "numeric"
+    );
+  }
+
   if (kind === "missing.fill_mean") {
     return columns.filter(
       (column) => column.semantic_type === "numeric"
@@ -110,7 +119,9 @@ function SampleTable({ snapshot, title }) {
                 {snapshot.column_ids.map(
                   (columnId, columnIndex) => (
                     <td key={columnId}>
-                      {formatValue(row[columnIndex])}
+                      <div className="cell-clamp" title={formatValue(row[columnIndex])}>
+                        {formatValue(row[columnIndex])}
+                      </div>
                     </td>
                   )
                 )}
@@ -309,6 +320,13 @@ export default function CleaningWorkspace({
   const [dayfirst, setDayfirst] = useState(false);
   const [utc, setUtc] = useState(false);
 
+  // Bulk Edit / Normalize Values state
+  const [valueMap, setValueMap] = useState({});
+  const [suggestions, setSuggestions] = useState({});
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [customRaw, setCustomRaw] = useState("");
+  const [customTarget, setCustomTarget] = useState("");
+
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -386,13 +404,13 @@ export default function CleaningWorkspace({
 
   const currentProfile =
     profile?.dataset_id === datasetId &&
-    profile?.dataset_version === datasetVersion
+      profile?.dataset_version === datasetVersion
       ? profile
       : null;
 
   const currentHistory =
     history?.dataset_id === datasetId &&
-    history?.dataset_version === datasetVersion
+      history?.dataset_version === datasetVersion
       ? history
       : null;
 
@@ -419,7 +437,57 @@ export default function CleaningWorkspace({
     (column) => column.id === activeColumnId
   );
 
-  const isRowOperation = selectedKind.startsWith("rows.");
+  // A range belongs to one column; clear it when the column changes.
+  useEffect(() => {
+    setOutMin("");
+    setOutMax("");
+  }, [activeColumnId]);
+
+  // Fetch value normalization suggestions when normalize_values is selected and column changes
+  useEffect(() => {
+    if (selectedKind !== "text.normalize_values" || !activeColumnId) {
+      setSuggestions({});
+      setValueMap({});
+      return;
+    }
+
+    const controller = new AbortController();
+    setLoadingSuggestions(true);
+
+    fetchValueSuggestions(activeColumnId, { signal: controller.signal })
+      .then((res) => {
+        if (controller.signal.aborted) return;
+        const foundSuggestions = res.suggestions || {};
+        setSuggestions(foundSuggestions);
+
+        const initialMap = {};
+        Object.entries(foundSuggestions).forEach(([canonical, variants]) => {
+          variants.forEach((v) => {
+            if (v !== canonical) {
+              initialMap[v] = canonical;
+            }
+          });
+        });
+        setValueMap(initialMap);
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setSuggestions({});
+          setValueMap({});
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoadingSuggestions(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedKind, activeColumnId]);
+
+  const isRowOperation =
+    selectedKind.startsWith("rows.") &&
+    selectedKind !== "rows.drop_outliers";
   const isColumnOperation = !isRowOperation;
 
   const blocked =
@@ -427,10 +495,14 @@ export default function CleaningWorkspace({
 
   const activePreview =
     preview?.dataset_id === datasetId &&
-    preview?.dataset_version === datasetVersion &&
-    preview?.kind === selectedKind
+      preview?.dataset_version === datasetVersion &&
+      preview?.kind === selectedKind
       ? preview
       : null;
+
+  const [outMin, setOutMin] = useState("");
+  const [outMax, setOutMax] = useState("");
+  const [keepMissing, setKeepMissing] = useState(true);
 
 
   function invalidatePreview() {
@@ -457,6 +529,38 @@ export default function CleaningWorkspace({
   }
 
 
+  function updateValueMapping(rawVal, targetVal) {
+    setValueMap((previous) => {
+      const next = { ...previous };
+      if (targetVal === "" || targetVal === rawVal) {
+        delete next[rawVal];
+      } else {
+        next[rawVal] = targetVal;
+      }
+      return next;
+    });
+    invalidatePreview();
+  }
+
+
+  function handleAddCustomMapping() {
+    if (!customRaw.trim() || !customTarget.trim()) return;
+    updateValueMapping(customRaw.trim(), customTarget.trim());
+    setCustomRaw("");
+    setCustomTarget("");
+  }
+
+
+  function handleRemoveMapping(rawVal) {
+    setValueMap((previous) => {
+      const next = { ...previous };
+      delete next[rawVal];
+      return next;
+    });
+    invalidatePreview();
+  }
+
+
   function buildParameters() {
     if (isColumnOperation && !activeColumnId) {
       throw new Error(
@@ -476,6 +580,40 @@ export default function CleaningWorkspace({
           column_ids: rowColumnIds,
           how,
         };
+
+      case "rows.drop_outliers": {
+        const parse = (text, label) => {
+          if (text.trim() === "") return null;
+          const number = Number(text);
+
+          if (!Number.isFinite(number)) {
+            throw new Error(`${label} must be a number.`);
+          }
+
+          return number;
+        };
+
+        const min = parse(outMin, "Minimum");
+        const max = parse(outMax, "Maximum");
+
+        if (min === null && max === null) {
+          throw new Error("Enter a minimum, a maximum, or both.");
+        }
+
+        if (min !== null && max !== null && min > max) {
+          throw new Error("Minimum cannot be greater than maximum.");
+        }
+
+        const params = {
+          column_id: activeColumnId,
+          keep_missing: keepMissing,
+        };
+
+        if (min !== null) params.min = min;
+        if (max !== null) params.max = max;
+
+        return params;
+      }
 
       case "missing.fill_mean":
         return {
@@ -542,6 +680,25 @@ export default function CleaningWorkspace({
           column_id: activeColumnId,
           characters,
         };
+
+      case "text.normalize_values": {
+        const activeMappings = Object.fromEntries(
+          Object.entries(valueMap).filter(
+            ([raw, target]) => target && raw !== target
+          )
+        );
+
+        if (Object.keys(activeMappings).length === 0) {
+          throw new Error(
+            "Configure at least one value mapping to normalize."
+          );
+        }
+
+        return {
+          column_id: activeColumnId,
+          value_map: activeMappings,
+        };
+      }
 
       case "column.to_numeric":
         return {
@@ -691,6 +848,31 @@ export default function CleaningWorkspace({
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  function suggestIqrRange() {
+    const stats = activeColumn?.numeric_stats;
+
+    if (!stats || stats.q1 == null || stats.q3 == null) {
+      setError("Not enough data to suggest a range.");
+      return;
+    }
+
+    const iqr = stats.q3 - stats.q1;
+
+    if (iqr === 0) {
+      setError(
+        "The interquartile range is zero, so an automatic " +
+        "range would be too narrow. Set the range manually."
+      );
+      return;
+    }
+
+    const round = (value) => Number(value.toPrecision(6));
+
+    setOutMin(String(round(stats.q1 - 1.5 * iqr)));
+    setOutMax(String(round(stats.q3 + 1.5 * iqr)));
+    invalidatePreview();
   }
 
 
@@ -1049,6 +1231,209 @@ export default function CleaningWorkspace({
               </div>
             )}
 
+            {selectedKind === "text.normalize_values" && (
+              <div className="cleaning-field">
+                <label>
+                  <strong>Bulk Edit & Value Normalization</strong>
+                </label>
+                <p className="muted">
+                  Explicitly map raw values to target canonical values. Unmapped values will remain untouched.
+                </p>
+
+                {loadingSuggestions ? (
+                  <p className="muted">Analyzing column values for variant suggestions...</p>
+                ) : (
+                  <>
+                    {Object.keys(suggestions).length > 0 && (
+                      <div className="cleaning-warning" style={{ marginBottom: "1rem" }}>
+                        <strong>Detected Variant Suggestions</strong>
+                        {Object.entries(suggestions).map(([canonical, variants]) => (
+                          <div key={canonical} style={{ marginTop: "0.5rem" }}>
+                            <span className="muted">Group (suggested target: <strong>{canonical}</strong>):</span>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.25rem" }}>
+                              {variants.map((v) => (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  className="outline-button"
+                                  style={{ padding: "0.2rem 0.5rem", fontSize: "0.85rem" }}
+                                  disabled={blocked}
+                                  onClick={() => updateValueMapping(v, canonical)}
+                                >
+                                  Map &quot;{v}&quot; &rarr; &quot;{canonical}&quot;
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="table-scroll" style={{ marginBottom: "1rem" }}>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th scope="col">Raw Value (Exact)</th>
+                            <th scope="col">Target Normalized Value</th>
+                            <th scope="col" style={{ width: "80px" }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.keys(valueMap).length === 0 ? (
+                            <tr>
+                              <td colSpan={3} className="muted" style={{ textAlign: "center" }}>
+                                No explicit value mappings configured yet.
+                              </td>
+                            </tr>
+                          ) : (
+                            Object.entries(valueMap).map(([raw, target]) => (
+                              <tr key={raw}>
+                                <td>
+                                  <code>{raw}</code>
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    value={target}
+                                    disabled={blocked}
+                                    onChange={(e) => updateValueMapping(raw, e.target.value)}
+                                  />
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="bmw-btn-link"
+                                    disabled={blocked}
+                                    onClick={() => handleRemoveMapping(raw)}
+                                  >
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="cleaning-parameter-grid">
+                      <div className="cleaning-field">
+                        <label htmlFor="custom-raw">Add Raw Value</label>
+                        <input
+                          id="custom-raw"
+                          type="text"
+                          value={customRaw}
+                          disabled={blocked}
+                          placeholder="e.g. m or male"
+                          onChange={(e) => setCustomRaw(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="cleaning-field">
+                        <label htmlFor="custom-target">Target Value</label>
+                        <input
+                          id="custom-target"
+                          type="text"
+                          value={customTarget}
+                          disabled={blocked}
+                          placeholder="e.g. Male"
+                          onChange={(e) => setCustomTarget(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="outline-button"
+                      disabled={blocked || !customRaw.trim() || !customTarget.trim()}
+                      onClick={handleAddCustomMapping}
+                      style={{ marginTop: "0.5rem" }}
+                    >
+                      Add Custom Mapping
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {selectedKind === "rows.drop_outliers" && (
+              <>
+                <div className="cleaning-field">
+                  <label htmlFor="outlier-min">
+                    Minimum allowed value (optional)
+                  </label>
+
+                  <input
+                    id="outlier-min"
+                    type="number"
+                    step="any"
+                    value={outMin}
+                    disabled={blocked}
+                    onChange={(event) =>
+                      changeValue(setOutMin, event.target.value)
+                    }
+                  />
+                </div>
+
+                <div className="cleaning-field">
+                  <label htmlFor="outlier-max">
+                    Maximum allowed value (optional)
+                  </label>
+
+                  <input
+                    id="outlier-max"
+                    type="number"
+                    step="any"
+                    value={outMax}
+                    disabled={blocked}
+                    onChange={(event) =>
+                      changeValue(setOutMax, event.target.value)
+                    }
+                  />
+                </div>
+
+                <div className="cleaning-field">
+                  <button
+                    type="button"
+                    className="outline-button"
+                    disabled={blocked || !activeColumn}
+                    onClick={suggestIqrRange}
+                  >
+                    Suggest range (IQR)
+                  </button>
+
+                  {activeColumn?.numeric_stats && (
+                    <p className="muted">
+                      Current column: min{" "}
+                      {activeColumn.numeric_stats.min}, Q1{" "}
+                      {activeColumn.numeric_stats.q1}, median{" "}
+                      {activeColumn.numeric_stats.median}, Q3{" "}
+                      {activeColumn.numeric_stats.q3}, max{" "}
+                      {activeColumn.numeric_stats.max}.
+                      The suggestion uses Q1 − 1.5×IQR and Q3 + 1.5×IQR.
+                    </p>
+                  )}
+                </div>
+
+                <div className="cleaning-field">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={keepMissing}
+                      disabled={blocked}
+                      onChange={(event) =>
+                        changeValue(
+                          setKeepMissing,
+                          event.target.checked
+                        )
+                      }
+                    />{" "}
+                    Keep rows where this column is empty
+                  </label>
+                </div>
+              </>
+            )}
+
             {selectedKind === "column.to_datetime" && (
               <>
                 <div className="cleaning-field">
@@ -1111,31 +1496,31 @@ export default function CleaningWorkspace({
               selectedKind === "column.to_numeric" ||
               selectedKind === "column.to_datetime"
             ) && (
-              <div className="cleaning-field">
-                <label htmlFor="invalid-policy">
-                  Invalid value policy
-                </label>
+                <div className="cleaning-field">
+                  <label htmlFor="invalid-policy">
+                    Invalid value policy
+                  </label>
 
-                <select
-                  id="invalid-policy"
-                  value={invalid}
-                  disabled={blocked}
-                  onChange={(event) =>
-                    changeValue(
-                      setInvalid,
-                      event.target.value
-                    )
-                  }
-                >
-                  <option value="reject">
-                    Reject invalid values (recommended)
-                  </option>
-                  <option value="null">
-                    Convert invalid values to null
-                  </option>
-                </select>
-              </div>
-            )}
+                  <select
+                    id="invalid-policy"
+                    value={invalid}
+                    disabled={blocked}
+                    onChange={(event) =>
+                      changeValue(
+                        setInvalid,
+                        event.target.value
+                      )
+                    }
+                  >
+                    <option value="reject">
+                      Reject invalid values (recommended)
+                    </option>
+                    <option value="null">
+                      Convert invalid values to null
+                    </option>
+                  </select>
+                </div>
+              )}
 
             <div className="actions">
               <button

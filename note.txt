@@ -1,6 +1,6 @@
 ## ALL PROBLEM AND SUGGESSTION RELATED THE PROECT
 
 -> Outlier detection and Removal
--> ANOVA
--> F-test,p-test,z-test
+-> Manual text input for graph and another AI should be able to interpret that (if possible) 
 -> int value must show x and y axis in int 
+d-> export option

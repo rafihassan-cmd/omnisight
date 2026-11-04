@@ -77,6 +77,11 @@ class Settings:
         os.getenv("GEMINI_TIMEOUT_MS", "30000")
     )
 
+        # Free-text question interpreter (Groq)
+    groq_api_key: str = os.getenv("GROQ_API_KEY", "")
+    groq_model: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+    groq_timeout_seconds: int = int(os.getenv("GROQ_TIMEOUT_SECONDS", "20"))
+
     insights_cache_ttl_seconds: int = int(
         os.getenv("OMNISIGHT_INSIGHTS_CACHE_TTL", "900")
     )

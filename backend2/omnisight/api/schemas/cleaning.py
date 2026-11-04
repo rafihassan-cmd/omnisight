@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -113,3 +113,15 @@ class CleaningOperationDefinition(BaseModel):
     category: str
     requires_preview: bool
     changes_schema: bool
+
+class ValueSuggestionsResponse(BaseModel):
+    column: str
+    suggestions: Dict[str, List[str]] = Field(
+        ..., description="Map of suggested canonical target value -> list of matching raw variants"
+    )
+
+class NormalizeValuesParams(BaseModel):
+    column: str
+    value_map: Dict[str, Any] = Field(
+        ..., description="Explicit dictionary mapping raw values to canonical target values"
+    )

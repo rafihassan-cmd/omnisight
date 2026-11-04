@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import {
     getGeneratedQuestions,
     validatePreparedAnalysis,
+    interpretQuestion,
 } from "../../api/planner";
 
 import {
@@ -286,6 +287,12 @@ export default function QuestionPlanner({
 
     const executionAbortRef = useRef(null);
 
+    const [askText, setAskText] = useState("");
+    const [asking, setAsking] = useState(false);
+    const [askResult, setAskResult] = useState(null);
+    const [askError, setAskError] = useState("");
+    const [customQuestions, setCustomQuestions] = useState([]);
+
 
     useEffect(() => {
         const controller = new AbortController();
@@ -305,6 +312,9 @@ export default function QuestionPlanner({
         setCopyStatus("");
         setValidation(null);
         setValidationError("");
+        setCustomQuestions([]);
+        setAskResult(null);
+        setAskError("");
 
         async function loadPlanner() {
             try {
@@ -373,7 +383,14 @@ export default function QuestionPlanner({
             ? catalog
             : null;
 
-    const allQuestions = activeCatalog?.questions || [];
+    const allQuestions = activeCatalog
+        ? [
+            ...customQuestions,
+            ...activeCatalog.questions.filter(
+                (q) => !customQuestions.some((c) => c.id === q.id)
+            ),
+        ]
+        : [];
 
     const categories = [
         ...new Set(
@@ -615,6 +632,52 @@ export default function QuestionPlanner({
         }
     }
 
+        async function handleAsk(event) {
+        event.preventDefault();
+
+        const text = askText.trim();
+        if (text.length < 3 || asking || controlsDisabled) return;
+
+        setAsking(true);
+        setAskError("");
+        setAskResult(null);
+
+        try {
+            const result = await interpretQuestion({
+                text,
+                expected_version: datasetVersion,
+            });
+
+            if (result.status === "feasible" && result.question) {
+                const question = { ...result.question, custom: true };
+
+                setCustomQuestions((previous) => [
+                    question,
+                    ...previous.filter((item) => item.id !== question.id),
+                ].slice(0, 10));
+
+                setSearch("");
+                setCategory("all");
+                setSelectedQuestionId(question.id);
+                setValidation(null);
+                setValidationError("");
+                clearAnalysisExecution();
+
+                setAskResult({
+                    status: "feasible",
+                    normalized_question: result.normalized_question,
+                });
+                setAskText("");
+            } else {
+                // Stay in this stage and explain why.
+                setAskResult(result);
+            }
+        } catch (err) {
+            setAskError(err.message || "Could not interpret the question.");
+        } finally {
+            setAsking(false);
+        }
+    }
 
     return (
         <section className="panel planner-workspace">
@@ -667,6 +730,72 @@ export default function QuestionPlanner({
 
             {activeCatalog && profile && (
                 <>
+                    <form className="planner-ask" onSubmit={handleAsk}>
+                        <label htmlFor="planner-ask-input">
+                            Ask your own question
+                        </label>
+
+                        <textarea
+                            id="planner-ask-input"
+                            rows={2}
+                            maxLength={500}
+                            value={askText}
+                            disabled={controlsDisabled || asking}
+                            placeholder='e.g. "Which region has the highest average sales?"'
+                            onChange={(e) => setAskText(e.target.value)}
+                        />
+
+                        <div className="actions">
+                            <button
+                                type="submit"
+                                disabled={
+                                    controlsDisabled || asking ||
+                                    askText.trim().length < 3
+                                }
+                            >
+                                {asking ? "Checking..." : "Check & Plan"}
+                            </button>
+                        </div>
+
+                        <p className="muted">
+                            Your question plus column names and types (not your
+                            rows) are sent to an external AI (Groq) to interpret it.
+                        </p>
+
+                        {askError && (
+                            <p className="error" role="alert">{askError}</p>
+                        )}
+
+                        {askResult?.status === "feasible" && (
+                            <p className="analysis-info" role="status">
+                                Interpreted as: {askResult.normalized_question}.
+                                Review the parameters below, then validate and execute.
+                            </p>
+                        )}
+
+                        {askResult?.status === "not_feasible" && (
+                            <div className="analysis-warning" role="alert">
+                                <h4>This question can't be run yet</h4>
+                                {askResult.normalized_question && (
+                                    <p className="muted">
+                                        Understood as: {askResult.normalized_question}
+                                    </p>
+                                )}
+                                <p>{askResult.reason}</p>
+                                {askResult.suggestions?.length > 0 && (
+                                    <ul>
+                                        {askResult.suggestions.map((s, i) => (
+                                            <li key={i}>{s}</li>
+                                        ))}
+                                    </ul>
+                                )}
+                                <p className="muted">
+                                    Rephrase it, fix the data in Stage 03, or
+                                    choose a predefined question below.
+                                </p>
+                            </div>
+                        )}
+                    </form>
                     <div className="planner-stats">
                         <div className="metric">
                             <span>Generated questions</span>

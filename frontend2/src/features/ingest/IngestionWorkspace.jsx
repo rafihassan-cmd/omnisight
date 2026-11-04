@@ -166,8 +166,8 @@ export default function IngestionWorkspace({
                 {uploading
                   ? "INGESTING DATASET..."
                   : dataset
-                  ? "REPLACE CURRENT DATASET"
-                  : "INGEST CSV DATASET"}
+                    ? "REPLACE CURRENT DATASET"
+                    : "INGEST CSV DATASET"}
               </button>
 
               {dataset && (
@@ -196,11 +196,11 @@ export default function IngestionWorkspace({
               <div className="telemetry-footer-grid">
                 <div className="metric">
                   <span>DATA POINTS</span>
-                  <strong>{dataset.row_count?.toLocaleString()} <small>rows</small></strong>
+                  <strong>{dataset.rows?.toLocaleString()} <small>rows</small></strong>
                 </div>
                 <div className="metric">
                   <span>DIMENSIONS</span>
-                  <strong>{dataset.column_count} <small>columns</small></strong>
+                  <strong>{dataset.columns} <small>columns</small></strong>
                 </div>
                 <div className="metric">
                   <span>REVISION</span>
@@ -209,10 +209,10 @@ export default function IngestionWorkspace({
                 <div className="metric">
                   <span>MEMORY FOOTPRINT</span>
                   <strong>
-                    {dataset.memory_bytes
-                      ? `${(dataset.memory_bytes / 1024).toFixed(1)}`
+                    {dataset.estimated_memory_bytes
+                      ? (dataset.estimated_memory_bytes / 1_000_000).toFixed(2)
                       : "—"}
-                    <small>KB</small>
+                    <small>MB</small>
                   </strong>
                 </div>
               </div>

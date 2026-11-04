@@ -70,10 +70,9 @@ def resolve_periods(
             series.dtype,
             pd.DatetimeTZDtype,
         ):
-            values = (
-                series.dt.tz_convert("UTC")
-                .dt.tz_localize(None)
-            )
+            # Drop the tz label but keep the wall-clock time,
+            # so periods follow the column's own offset.
+            values = series.dt.tz_localize(None)
 
         return values.dt.to_period(
             FREQUENCIES[frequency]
@@ -207,9 +206,9 @@ def run_time_counts(
             "frequency": frequency,
             "week_starts_on": "Monday",
             "timezone_basis": (
-                "UTC"
+                "column_local_time"
                 if isinstance(
-                    series.dtype,
+                    series.dtype,          # use time_series in run_time_aggregation
                     pd.DatetimeTZDtype,
                 )
                 else "naive_calendar"
@@ -354,9 +353,9 @@ def run_time_aggregation(
             "aggregation": aggregation,
             "week_starts_on": "Monday",
             "timezone_basis": (
-                "UTC"
+                "column_local_time"
                 if isinstance(
-                    time_series.dtype,
+                    time_series.dtype,          # use time_series in run_time_aggregation
                     pd.DatetimeTZDtype,
                 )
                 else "naive_calendar"

@@ -1885,3 +1885,19 @@ tr:hover td {
     width: 320px;
   }
 }
+
+/* Clamp long cell content to a fixed number of lines, ending in "…" */
+.cell-clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;      /* max lines per cell */
+  line-clamp: 3;
+  overflow: hidden;
+  max-width: 620px;           /* max cell width */
+  white-space: normal;
+  overflow-wrap: break-word;    /* breaks very long unbroken strings */
+  cursor: help;
+}
+
+.planner-ask { display: grid; gap: 8px; margin-bottom: 20px; }
+.planner-ask textarea { width: 100%; resize: vertical; }

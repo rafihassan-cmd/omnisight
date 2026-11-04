@@ -1,5 +1,7 @@
 import ChartRenderer from "./ChartRenderer";
 import InsightsPanel from "../insights/InsightsPanel";
+import { useState } from "react";
+import { exportAnalysisPdf } from "./exportPdf";
 
 const TABLE_PREVIEW_LIMIT = 50;
 
@@ -119,7 +121,9 @@ function ResultTable({ table }) {
                 <tr key={index}>
                   {table.columns.map((column) => (
                     <td key={column.key}>
-                      {formatValue(row[column.key])}
+                      <div className="cell-clamp" title={formatValue(row[column.key])}>
+                        {formatValue(row[column.key])}
+                      </div>
                     </td>
                   ))}
                 </tr>
@@ -152,7 +156,27 @@ function AnalysisWarnings({ warnings }) {
 
 export default function AnalysisResults({ execution }) {
   const { plan, result } = execution;
+  const [insights, setInsights] = useState(null);
+  const [includeSummary, setIncludeSummary] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
 
+  async function handleExportPdf() {
+    setExporting(true);
+    setExportError("");
+
+    try {
+      await exportAnalysisPdf({
+        execution,
+        insights,
+        includeSummary: includeSummary && Boolean(insights),
+      });
+    } catch (err) {
+      setExportError(err.message || "Could not create the PDF.");
+    } finally {
+      setExporting(false);
+    }
+  }
   const executedAt = new Date(
     execution.executed_at
   );
@@ -184,7 +208,33 @@ export default function AnalysisResults({ execution }) {
           Execution complete
         </span>
       </div>
+      <div className="actions">
+        <label>
+          <input
+            type="checkbox"
+            checked={includeSummary && Boolean(insights)}
+            disabled={!insights}
+            onChange={(event) =>
+              setIncludeSummary(event.target.checked)
+            }
+          />{" "}
+          Include AI summary
+          {!insights && " (generate it below first)"}
+        </label>
 
+        <button
+          type="button"
+          className="outline-button"
+          disabled={exporting}
+          onClick={handleExportPdf}
+        >
+          {exporting ? "Preparing PDF..." : "EXPORT PDF"}
+        </button>
+      </div>
+
+      {exportError && (
+        <p className="error" role="alert">{exportError}</p>
+      )}
       <AnalysisWarnings warnings={result.warnings} />
 
       <MetricsPanel metrics={result.metrics} />
@@ -256,6 +306,7 @@ export default function AnalysisResults({ execution }) {
       <InsightsPanel
         key={execution.execution_id}
         execution={execution}
+        onInsights={setInsights}
       />
     </section>
   );

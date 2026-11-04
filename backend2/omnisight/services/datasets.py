@@ -120,6 +120,9 @@ class DatasetState:
     insights_cache: dict[str, dict] = field(
         default_factory=dict
     )
+    custom_questions: dict[str, dict] = field(
+        default_factory=dict
+    )
 
     original_column_ids: list[str] = field(
     default_factory=list

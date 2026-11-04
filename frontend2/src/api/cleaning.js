@@ -141,3 +141,24 @@ export function resetCleaning(expectedVersion) {
     },
   });
 }
+
+export async function fetchValueSuggestions(columnId, options = {}) {
+  const response = await fetch(
+    `/api/v1/cleaning/suggestions/normalize-values?column=${encodeURIComponent(columnId)}`,
+    {
+      headers: {
+        'X-OmniSight-Request': '1',
+      },
+      signal: options.signal,
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail || 'Failed to fetch normalization suggestions.'
+    );
+  }
+
+  return response.json();
+}

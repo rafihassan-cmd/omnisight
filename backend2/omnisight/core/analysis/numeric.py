@@ -29,6 +29,47 @@ if TYPE_CHECKING:
         ValidatedAnalysisPlan,
     )
 
+def _nice_histogram_edges(
+    values: np.ndarray,
+    target_bins: int,
+) -> np.ndarray:
+    """Generate histogram boundaries using rounded intervals."""
+
+    minimum = float(values.min())
+    maximum = float(values.max())
+
+    if minimum == maximum:
+        magnitude = 10 ** np.floor(np.log10(abs(minimum) or 1))
+        step = magnitude / 10
+        return np.array([
+            minimum - step,
+            minimum + step,
+        ])
+
+    raw_step = (maximum - minimum) / target_bins
+
+    magnitude = 10 ** np.floor(np.log10(raw_step))
+    normalized = raw_step / magnitude
+
+    nice_steps = np.array([1, 2, 2.5, 5, 10])
+    nice_step = (
+        nice_steps[nice_steps >= normalized][0]
+        * magnitude
+    )
+
+    lower = np.floor(minimum / nice_step) * nice_step
+    upper = np.ceil(maximum / nice_step) * nice_step
+
+    if lower == upper:
+        upper += nice_step
+
+    bin_count = int(round((upper - lower) / nice_step))
+
+    return np.linspace(
+        lower,
+        upper,
+        bin_count + 1,
+    )
 
 def run_histogram(
     dataframe: pd.DataFrame,
@@ -61,9 +102,14 @@ def run_histogram(
         )
 
     try:
+        edges = _nice_histogram_edges(
+            finite_values,
+            bins,
+        )
+
         counts, edges = np.histogram(
             finite_values,
-            bins=bins,
+            bins=edges,
         )
     except (ValueError, OverflowError) as exc:
         raise AnalysisNotApplicable(

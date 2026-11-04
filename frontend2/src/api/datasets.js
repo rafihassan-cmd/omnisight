@@ -183,3 +183,39 @@ export async function renameDatasetColumn(
 
   return handleResponse(response);
 }
+
+export function saveBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export async function downloadCleanedCsv() {
+  const response = await fetch(
+    `${API_BASE}/datasets/current/export.csv`,
+    { credentials: "same-origin" }
+  );
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(
+      typeof body?.detail === "string"
+        ? body.detail
+        : `Export failed (${response.status})`
+    );
+  }
+
+  const blob = await response.blob();
+  const disposition =
+    response.headers.get("Content-Disposition") || "";
+  const match = /filename="([^"]+)"/.exec(disposition);
+
+  saveBlob(blob, match ? match[1] : "dataset_cleaned.csv");
+}

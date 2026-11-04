@@ -97,3 +97,18 @@ class ValidatedAnalysisPlanResponse(BaseModel):
 class AnalysisValidationResponse(BaseModel):
     valid: bool
     plan: ValidatedAnalysisPlanResponse
+
+class InterpretRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=3, max_length=500)
+    expected_version: int = Field(ge=0, strict=True)
+
+
+class InterpretResponse(BaseModel):
+    status: Literal["feasible", "not_feasible"]
+    normalized_question: str | None = None
+    reason_code: str | None = None
+    reason: str | None = None
+    suggestions: list[str] = Field(default_factory=list)
+    question: GeneratedQuestion | None = None

@@ -98,6 +98,15 @@ def validate_analysis_request(
     )
 
     if question is None:
+        entry = dataset.custom_questions.get(question_id)
+
+        if (
+            entry is not None
+            and entry["version"] == dataset.version
+        ):
+            question = entry["question"]
+
+    if question is None:
         raise QuestionNotAvailable(
             "This analytical question is not available "
             "for the current dataset revision. "

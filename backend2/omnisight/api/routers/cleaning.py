@@ -9,6 +9,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Query,
 )
 
 from omnisight.config import settings
@@ -30,6 +31,7 @@ from omnisight.api.schemas.cleaning import (
     CleaningOperationDefinition,
     CleaningVersionRequest,
     CleaningMutationResponse,
+    ValueSuggestionsResponse,
 )
 
 from omnisight.core.changes.registry import (
@@ -40,6 +42,7 @@ from omnisight.core.changes.registry import (
 
 from omnisight.core.changes.cleaning import (
     CleaningValidationError,
+    get_value_variant_suggestions,
 )
 
 from omnisight.core.changes.engine import (
@@ -437,3 +440,30 @@ def get_cleaning_operations(
         for definition in definitions
         if definition.requires_preview
     ]
+
+@router.get("/suggestions/normalize-values", response_model=ValueSuggestionsResponse)
+async def suggest_normalize_values(
+    column: str = Query(..., description="Target column ID or column name"),
+    session: SessionState = Depends(get_active_session),
+):
+    if session.dataset is None:
+        raise HTTPException(status_code=404, detail="Active dataset not found in session.")
+
+    dataset = session.dataset
+    df = dataset.current
+
+    target_column = None
+
+    # 1. Match directly against current DataFrame column names
+    if column in df.columns:
+        target_column = column
+    # 2. Resolve stable column_id → current column name
+    elif column in dataset.column_ids:
+        idx = dataset.column_ids.index(column)
+        target_column = str(df.columns[idx])
+
+    if not target_column:
+        raise HTTPException(status_code=400, detail=f"Column '{column}' not found in dataset.")
+
+    suggestions = get_value_variant_suggestions(df, target_column)
+    return ValueSuggestionsResponse(column=column, suggestions=suggestions)

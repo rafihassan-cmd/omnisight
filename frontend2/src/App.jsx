@@ -14,6 +14,7 @@ import {
   deleteCurrentDataset,
   renameDatasetColumn,
   deleteDatasetColumn,
+  downloadCleanedCsv
 } from "./api/datasets";
 
 import { StepperNav, StepFooter } from "./components/StepperNav";
@@ -269,6 +270,18 @@ function App() {
     }
   }
 
+    async function handleExportCsv() {
+    if (!dataset || busy) return;
+
+    setError("");
+
+    try {
+      await downloadCleanedCsv();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <div className="telemetry-workbench-root">
       {/* Global Slide-out History Drawer (Hover left edge on EVERY page) */}
@@ -306,6 +319,18 @@ function App() {
               <span className="workspace-pill" title={dataset.filename}>
                 <span className="mono">DATASET:</span> {dataset.filename} <span className="sample-badge">v{dataset.version}</span>
               </span>
+            )}
+
+            {dataset && (
+              <button
+                type="button"
+                className="outline-button"
+                onClick={handleExportCsv}
+                disabled={busy}
+                title="Download the current cleaned dataset as CSV"
+              >
+                EXPORT CSV
+              </button>
             )}
 
             {session ? (

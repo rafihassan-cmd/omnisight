@@ -17,8 +17,10 @@ from omnisight.core.changes.cleaning import (
     trim_text,
     strip_affixes,
     remove_separators,
+    drop_outliers,
     convert_to_numeric,
     convert_to_datetime,
+    normalize_column_values,
 )
 
 
@@ -33,8 +35,10 @@ class ColumnNameConflict(Exception):
 class InvalidColumnName(Exception):
     pass
 
+
 class CannotDropLastColumn(ValueError):
     pass
+
 
 def apply_column_drop(
     dataframe: pd.DataFrame,
@@ -92,6 +96,7 @@ def apply_column_drop(
         "columns_before": len(column_ids),
         "columns_after": len(remaining_positions),
     }
+
 
 def apply_column_rename(
     dataframe: pd.DataFrame,
@@ -165,8 +170,6 @@ def apply_column_rename(
                 "Another column already has this name."
             )
 
-    # Create a separate DataFrame object.
-    # Only its column labels are modified.
     result = dataframe.copy(deep=False)
 
     updated_columns = list(result.columns)
@@ -179,6 +182,37 @@ def apply_column_rename(
         "column_id": column_id,
         "old_name": old_name,
         "new_name": new_name,
+    }
+
+
+def apply_normalize_values(
+    dataframe: pd.DataFrame,
+    column_ids: list[str],
+    parameters: dict[str, Any],
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Normalize text values using an explicit mapping."""
+
+    column_id = parameters.get("column_id") or parameters.get("column")
+    value_map = parameters.get("value_map", {})
+
+    if not isinstance(column_id, str):
+        raise ColumnNotFound("A valid column identifier is required.")
+
+    if column_id in column_ids:
+        position = column_ids.index(column_id)
+        target_column = str(dataframe.columns[position])
+    elif column_id in dataframe.columns:
+        target_column = column_id
+    else:
+        raise ColumnNotFound(f"Column '{column_id}' was not found.")
+
+    result = normalize_column_values(dataframe, target_column, value_map)
+
+    return result, {
+        "changed": True,
+        "column_id": column_id,
+        "column_name": target_column,
+        "mapped_count": len(value_map),
     }
 
 
@@ -195,6 +229,8 @@ CHANGE_HANDLERS = {
     "text.trim": trim_text,
     "text.strip_affixes": strip_affixes,
     "text.remove_separators": remove_separators,
+    "text.normalize_values": apply_normalize_values,
+    "rows.drop_outliers": drop_outliers,
 
     "column.to_numeric": convert_to_numeric,
     "column.to_datetime": convert_to_datetime,
@@ -211,10 +247,10 @@ def apply_change(
     Execute one registered dataset operation.
 
     This function:
-      - does not modify the original DataFrame
-      - does not write to session state
-      - does not add history records
-      - does not increment dataset versions
+- does not modify the original DataFrame
+- does not write to session state
+- does not add history records
+- does not increment dataset versions
 
     Those responsibilities belong to the dataset service.
     """

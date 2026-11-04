@@ -29,7 +29,7 @@ function InsightList({ title, items }) {
 }
 
 
-export default function InsightsPanel({ execution }) {
+export default function InsightsPanel({ execution, onInsights }) {
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(true);
 
@@ -101,6 +101,8 @@ export default function InsightsPanel({ execution }) {
     setError("");
     setResponse(null);
 
+    onInsights?.(null);
+
     try {
       const result = await generateInsights(
         payload,
@@ -123,6 +125,7 @@ export default function InsightsPanel({ execution }) {
       }
 
       setResponse(result);
+      onInsights?.(result.insights);
 
     } catch (err) {
       if (!controller.signal.aborted) {

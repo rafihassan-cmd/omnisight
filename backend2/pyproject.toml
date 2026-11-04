@@ -13,7 +13,6 @@ dependencies = [
     "pandas>=2.2,<4",
     "google-genai",
     "python-dotenv",
-    "package-name>=0.1",
 ]
 
 [tool.setuptools.packages.find]

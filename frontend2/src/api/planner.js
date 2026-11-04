@@ -98,3 +98,25 @@ export async function validatePreparedAnalysis(payload) {
 
   return response.json();
 }
+
+export async function interpretQuestion(payload, { signal } = {}) {
+  const response = await fetch(`${API_BASE}/planner/interpret`, {
+    method: "POST",
+    credentials: "same-origin",
+    signal,
+    headers: {
+      "Content-Type": "application/json",
+      "X-OmniSight-Request": "1",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    const error = new Error(parseError(body, response.status));
+    error.status = response.status;
+    throw error;
+  }
+
+  return response.json();
+}

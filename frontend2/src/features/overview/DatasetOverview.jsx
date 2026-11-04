@@ -521,7 +521,9 @@ export default function DatasetOverview({
                       {currentProfile.columns.map(
                         (column, colIndex) => (
                           <td key={column.id}>
-                            {formatCell(row[colIndex])}
+                            <div className="cell-clamp" title={formatCell(row[colIndex])}>
+                              {formatCell(row[colIndex])}
+                            </div>
                           </td>
                         )
                       )}

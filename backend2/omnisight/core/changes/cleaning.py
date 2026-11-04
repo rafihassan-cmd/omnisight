@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Callable
+from typing import Any, Callable, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -569,6 +569,110 @@ def remove_separators(
         lambda value: value.translate(translation),
     )
 
+def numeric_bound(params: dict, key: str) -> float | None:
+    value = params.get(key)
+
+    if value is None:
+        return None
+
+    if (
+        type(value) not in (int, float)
+        or not math.isfinite(value)
+    ):
+        raise CleaningValidationError(
+            f"{key} must be a finite number."
+        )
+
+    return float(value)
+
+
+def drop_outliers(
+    df: pd.DataFrame,
+    ids: list[str],
+    params: dict,
+) -> tuple[pd.DataFrame, dict]:
+    """Remove rows whose value lies outside [min, max]."""
+
+    validate_keys(
+        params,
+        {"column_id"},
+        {"min", "max", "keep_missing"},
+    )
+
+    idx = column_position(df, ids, params["column_id"])
+    series = df.iloc[:, idx]
+
+    if (
+        is_bool_dtype(series.dtype)
+        or not is_numeric_dtype(series.dtype)
+    ):
+        raise CleaningValidationError(
+            "Outlier removal requires a numeric column."
+        )
+
+    low = numeric_bound(params, "min")
+    high = numeric_bound(params, "max")
+
+    if low is None and high is None:
+        raise CleaningValidationError(
+            "Provide a minimum, a maximum, or both."
+        )
+
+    if low is not None and high is not None and low > high:
+        raise CleaningValidationError(
+            "Minimum cannot be greater than maximum."
+        )
+
+    keep_missing = boolean(params, "keep_missing", True)
+
+    values = pd.to_numeric(
+        series, errors="coerce"
+    ).to_numpy(dtype="float64", na_value=np.nan)
+
+    missing = np.isnan(values)
+
+    # NaN comparisons are False, so missing rows are
+    # untouched unless keep_missing is False.
+    outside = np.zeros(len(values), dtype=bool)
+
+    if low is not None:
+        outside |= values < low
+
+    if high is not None:
+        outside |= values > high
+
+    # +/-inf are never valid observations.
+    outside |= np.isinf(values)
+
+    if not keep_missing:
+        outside |= missing
+
+    removed = int(outside.sum())
+
+    if removed == 0:
+        return df, details(
+            df, df, 0, [ids[idx]],
+            removed_rows=0,
+        )
+
+    if removed == len(df):
+        raise CleaningValidationError(
+            "This range would remove every row. "
+            "Widen the range."
+        )
+
+    result = df.iloc[
+        np.flatnonzero(~outside)
+    ].reset_index(drop=True)
+
+    return result, details(
+        df, result, removed, [ids[idx]],
+        removed_rows=removed,
+        min=low,
+        max=high,
+        keep_missing=keep_missing,
+    )
+
 # -------------------------------------------------
 # Type conversion operations
 # -------------------------------------------------
@@ -761,3 +865,43 @@ def convert_to_datetime(
         new_dtype=str(converted.dtype),
         introduced_nulls=invalid_count,
     )
+
+def normalize_column_values(df: pd.DataFrame, column: str, value_map: Dict[str, Any]) -> pd.DataFrame:
+    """
+    Replaces exact matching keys in `value_map` with target values for a single column.
+    Unmapped values and null/NaN entries remain completely untouched.
+    """
+    if column not in df.columns or not value_map:
+        return df
+
+    df = df.copy()
+    # Replace explicit exact matches present in value_map
+    df[column] = df[column].replace(value_map)
+    return df
+
+
+def get_value_variant_suggestions(df: pd.DataFrame, column: str) -> Dict[str, List[str]]:
+    """
+    Identifies variations of string values (case, whitespace)
+    and groups them under a suggested canonical value.
+    """
+    if column not in df.columns:
+        return {}
+
+    # Safely convert non-null series values to strings
+    series = df[column].dropna().astype(str)
+    unique_vals = [v for v in series.unique() if v.strip() != ""]
+
+    groups: Dict[str, List[str]] = {}
+    for val in unique_vals:
+        key = val.strip().lower()
+        groups.setdefault(key, []).append(val)
+
+    suggestions: Dict[str, List[str]] = {}
+    for norm_key, variants in groups.items():
+        if len(variants) > 1:
+            # Pick variant with highest frequency using safe string comparison
+            canonical = max(variants, key=lambda v: (series == str(v)).sum())
+            suggestions[canonical] = variants
+
+    return suggestions

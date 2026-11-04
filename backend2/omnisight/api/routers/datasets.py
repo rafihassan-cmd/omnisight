@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from io import BytesIO
 from urllib.parse import unquote
 
@@ -12,6 +14,7 @@ from fastapi import (
     Request,
     status,
 )
+from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 from starlette.requests import ClientDisconnect
 
@@ -20,6 +23,11 @@ from omnisight.api.deps import (
     get_active_session,
     get_session_store,
     require_mutation_header,
+)
+from omnisight.core.io import (
+    CSVParseError,
+    DatasetMemoryLimitError as UploadMemoryLimitError,
+    parse_csv,
 )
 from omnisight.core.changes.engine import (
     CannotDropLastColumn,
@@ -31,11 +39,6 @@ from omnisight.api.schemas.datasets import (
     RenameColumnRequest,
     serialize_dataset,
     DeleteColumnRequest,
-)
-from omnisight.core.io import (
-    CSVParseError,
-    DatasetMemoryLimitError,
-    parse_csv,
 )
 from omnisight.services.datasets import (
     create_dataset,
@@ -209,7 +212,7 @@ async def upload_dataset(
                 detail=str(exc),
             ) from exc
 
-        except DatasetMemoryLimitError as exc:
+        except UploadMemoryLimitError as exc:
             raise HTTPException(
                 status_code=413,
                 detail=str(exc),
@@ -457,3 +460,53 @@ def delete_dataset_column(
             session.pending_preview = None
 
         return serialize_dataset(updated)
+
+def csv_chunks(dataframe, chunk_rows: int = 50_000):
+    """Yield CSV bytes in chunks (UTF-8 with BOM for Excel)."""
+
+    yield b"\xef\xbb\xbf"
+
+    if len(dataframe) == 0:
+        yield dataframe.to_csv(index=False).encode("utf-8")
+        return
+
+    for start in range(0, len(dataframe), chunk_rows):
+        chunk = dataframe.iloc[start:start + chunk_rows]
+
+        yield chunk.to_csv(
+            index=False,
+            header=(start == 0),
+        ).encode("utf-8")
+
+
+@router.get("/current/export.csv")
+def export_current_dataset(
+    session: SessionState = Depends(get_active_session),
+):
+    """Download the current (cleaned) dataset as CSV."""
+
+    with session.lock:
+        dataset = session.dataset
+
+        if dataset is None:
+            raise HTTPException(
+                status_code=404,
+                detail="No dataset uploaded.",
+            )
+
+        # DataFrames are replaced, never edited in place,
+        # so this reference stays valid after the lock ends.
+        dataframe = dataset.current
+        stem = dataset.filename.rsplit(".", 1)[0]
+
+    safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "_", stem) or "dataset"
+
+    return StreamingResponse(
+        csv_chunks(dataframe),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{safe_stem}_cleaned.csv"',
+            "Cache-Control": "no-store",
+        },
+    )

@@ -255,8 +255,14 @@ def build_cleaning_preview(
     warnings = []
 
     if removed_rows:
+        percent = (
+            removed_rows / rows_before * 100
+            if rows_before else 0
+        )
+
         warnings.append(
-            f"{removed_rows} rows would be removed."
+            f"{removed_rows} rows ({percent:.1f}%) "
+            "would be removed."
         )
 
     if introduced_nulls:
